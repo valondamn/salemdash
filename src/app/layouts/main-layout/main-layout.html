@@ -1,0 +1,25 @@
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand">SD</div>
+    <app-tabs class="tabs-slot" [tabs]="tabs"></app-tabs>
+    <button class="btn" (click)="logout()">Logout</button>
+
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="title">Salem</div>
+
+
+      <div class="actions">
+        <button class="btn">Quick action</button>
+      </div>
+    </header>
+
+    <main class="content">
+      <router-outlet></router-outlet>
+    </main>
+
+  </div>
+
+</div>

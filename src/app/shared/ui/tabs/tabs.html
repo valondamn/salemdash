@@ -1,0 +1,8 @@
+<nav class="tabs" aria-label="Section tabs">
+  <app-tab-item
+    *ngFor="let t of tabs"
+    [label]="t.label"
+    [to]="t.to"
+    [icon]="t.icon"
+  />
+</nav>

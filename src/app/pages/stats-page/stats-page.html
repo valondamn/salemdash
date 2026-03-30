@@ -1,0 +1,105 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1>Stats</h1>
+      <p class="muted">YouTube stats from API</p>
+    </div>
+
+    <div class="controls">
+      <select class="select" [(ngModel)]="selectedProjectId" (change)="onProjectChange()">
+        <option value="" disabled>Select project...</option>
+        <option *ngFor="let p of projects" [value]="p.id">
+          {{ p.name || p.utm_name || ('Project ' + p.id) }}
+        </option>
+      </select>
+
+      <button class="btn" (click)="loadProjectInfo()" [disabled]="loadingInfo || !selectedProjectId">
+        {{ loadingInfo ? 'Loading…' : 'Refresh' }}
+      </button>
+    </div>
+  </div>
+
+  <div class="errbox" *ngIf="error">{{ error }}</div>
+  <section class="stats-grid" *ngIf="episodes.length">
+    <div class="stat card">
+      <div class="label">Episodes</div>
+      <div class="value">{{ episodes.length }}</div>
+      <div class="hint muted">items</div>
+    </div>
+
+    <div class="stat card">
+      <div class="label">Views</div>
+      <div class="value">{{ fmt(totalViews) }}</div>
+      <div class="hint muted">sum</div>
+    </div>
+
+    <div class="stat card">
+      <div class="label">Likes</div>
+      <div class="value">{{ fmt(totalLikes) }}</div>
+      <div class="hint muted">sum</div>
+    </div>
+
+    <div class="stat card">
+      <div class="label">Comments</div>
+      <div class="value">{{ fmt(totalComments) }}</div>
+      <div class="hint muted">sum</div>
+    </div>
+
+    <div class="stat card">
+      <div class="label">Avg views / ep</div>
+      <div class="value">{{ fmt(avgViews) }}</div>
+      <div class="hint muted">average</div>
+    </div>
+
+    <div class="stat card">
+      <div class="label">Engagement</div>
+      <div class="value">{{ fmtPct(engagementRate) }}</div>
+      <div class="hint muted">(likes+comments)/views</div>
+    </div>
+  </section>
+
+
+  <section class="grid-2">
+    <section class="card panel">
+      <div class="panel-head">
+        <div class="panel-title">Engagement rate per episode</div>
+        <div class="muted">%</div>
+      </div>
+      <app-engagement-chart [episodes]="episodes"></app-engagement-chart>
+    </section>
+
+    <section class="card panel">
+      <div class="panel-head">
+        <div class="panel-title">Top episodes by views</div>
+        <div class="muted">Top 5</div>
+      </div>
+
+      <div class="table">
+        <div class="row headrow">
+          <div>Episode</div>
+          <div>Views</div>
+          <div>Likes</div>
+          <div>Comments</div>
+        </div>
+
+        <div class="row" *ngFor="let e of topEpisodes">
+          <div class="ep">{{ e.episode_name || '—' }}</div>
+          <div>{{ fmt(Number(e.youtube_views) || 0) }}</div>
+          <div>{{ fmt(Number(e.youtube_likes) || 0) }}</div>
+          <div>{{ fmt(Number(e.youtube_comments) || 0) }}</div>
+        </div>
+      </div>
+    </section>
+  </section>
+
+
+
+  <section class="card panel">
+    <div class="panel-head">
+      <div class="panel-title">Views / Likes / Comments per episode</div>
+      <div class="muted" *ngIf="loadingInfo">Loading data…</div>
+    </div>
+
+    <app-episodes-chart [episodes]="episodes"></app-episodes-chart>
+  </section>
+</div>

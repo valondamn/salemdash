@@ -1,0 +1,45 @@
+<div class="login-page">
+<div class="login card">
+  <div class="head">
+    <h1>Sign in</h1>
+    <p class="muted">Use your account to access the dashboard</p>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" class="form">
+    <label class="field">
+      <span>Email</span>
+      <input class="input" type="email" formControlName="email" placeholder="you@example.com" />
+      <small class="err" *ngIf="form.controls.email.touched && form.controls.email.invalid">
+        Enter a valid email
+      </small>
+    </label>
+
+    <label class="field">
+      <span>Password</span>
+
+      <div class="pass">
+        <input
+          class="input"
+          [type]="showPassword ? 'text' : 'password'"
+          formControlName="password"
+          placeholder="••••••••"
+        />
+        <button type="button" class="ghost" (click)="showPassword = !showPassword">
+          {{ showPassword ? 'Hide' : 'Show' }}
+        </button>
+      </div>
+
+      <small class="err" *ngIf="form.controls.password.touched && form.controls.password.invalid">
+        Min 6 characters
+      </small>
+    </label>
+
+    <div class="errbox" *ngIf="error">{{ error }}</div>
+
+    <button class="btn primary" type="submit" [disabled]="loading">
+      <span *ngIf="!loading">Sign in</span>
+      <span *ngIf="loading">Signing in…</span>
+    </button>
+  </form>
+</div>
+</div>

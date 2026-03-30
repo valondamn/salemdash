@@ -1,0 +1,80 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1>Dashboard</h1>
+      <p class="muted">Projects overview (YouTube for now)</p>
+    </div>
+
+    <div class="controls">
+      <select
+        class="select"
+        [(ngModel)]="selectedProjectId"
+        (change)="onProjectChange()"
+        [disabled]="loadingProjects"
+      >
+        <option value="" disabled>Select project...</option>
+
+        <option *ngFor="let p of projects" [value]="p.id">
+          {{ p.name || p.utm_name || ('Project ' + p.id) }}
+        </option>
+      </select>
+
+      <button class="btn" (click)="loadProjectInfo()" [disabled]="loadingInfo || !selectedProjectId">
+        {{ loadingInfo ? 'Loading…' : 'Refresh' }}
+      </button>
+    </div>
+  </div>
+
+  <div class="errbox" *ngIf="error">{{ error }}</div>
+
+  <section class="stats-grid">
+    <div class="stat card">
+      <div class="label">Episodes</div>
+      <div class="value">{{ episodes.length }}</div>
+      <div class="hint muted">items from API</div>
+    </div>
+
+    <div class="stat card">
+      <div class="label">Views</div>
+      <div class="value">{{ fmt(totalViews) }}</div>
+      <div class="hint muted">sum</div>
+    </div>
+
+    <div class="stat card">
+      <div class="label">Likes</div>
+      <div class="value">{{ fmt(totalLikes) }}</div>
+      <div class="hint muted">sum</div>
+    </div>
+
+    <div class="stat card">
+      <div class="label">Comments</div>
+      <div class="value">{{ fmt(totalComments) }}</div>
+      <div class="hint muted">sum</div>
+    </div>
+  </section>
+
+  <section class="card panel">
+    <div class="panel-head">
+      <div class="panel-title">Episodes</div>
+      <div class="muted" *ngIf="loadingInfo">Loading data…</div>
+    </div>
+
+    <div class="table">
+      <div class="row headrow">
+        <div>Episode</div>
+        <div>Views</div>
+        <div>Likes</div>
+        <div>Comments</div>
+        <div>Release</div>
+      </div>
+
+      <div class="row" *ngFor="let e of episodes.slice(0, 15)">
+        <div class="ep">{{ e.episode_name || '—' }}</div>
+        <div>{{ fmt(toNum(e.youtube_views) || 0) }}</div>
+        <div>{{ fmt(toNum(e.youtube_likes) || 0) }}</div>
+        <div>{{ fmt(toNum(e.youtube_comments) || 0) }}</div>
+        <div class="muted">{{ (e.youtube_release_date || e.release_date || '').slice(0, 10) || '—' }}</div>
+      </div>
+    </div>
+  </section>
+</div>

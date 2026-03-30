@@ -1,0 +1,131 @@
+.page {
+  display: grid;
+  gap: 16px;
+}
+
+.page-head {
+  h1 { margin: 0; font-size: 28px; }
+}
+
+.muted { color: var(--muted); margin: 6px 0 0; }
+
+.stats-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.stat {
+  padding: 14px;
+
+  .label { color: var(--muted); font-size: 13px; }
+  .value { font-size: 26px; font-weight: 800; margin-top: 6px; }
+  .hint { margin-top: 6px; font-size: 13px; }
+}
+
+.placeholder {
+  padding: 18px;
+  min-height: 220px;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+
+  .ph-title { font-weight: 700; }
+}
+
+
+.chart-card {
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.chart-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+}
+
+.chart-title {
+  font-weight: 800;
+}
+
+@media (max-width: 1100px) {
+  .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .stats-grid { grid-template-columns: 1fr; }
+}
+
+
+.controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.select {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.03);
+  color: var(--text);
+  min-width: 280px;
+  outline: none;
+}
+
+.select:focus {
+  border-color: rgba(91,140,255,0.6);
+  box-shadow: 0 0 0 4px rgba(91,140,255,0.12);
+}
+
+.panel {
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.panel-title {
+  font-weight: 800;
+}
+
+.table {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.02);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1.6fr 0.6fr 0.6fr 0.7fr 0.7fr;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  gap: 10px;
+}
+
+.headrow {
+  border-top: none;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.ep {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.errbox {
+  border: 1px solid rgba(255, 91, 110, 0.35);
+  background: rgba(255, 91, 110, 0.10);
+  color: rgba(255, 255, 255, 0.92);
+  padding: 10px 12px;
+  border-radius: 12px;
+}

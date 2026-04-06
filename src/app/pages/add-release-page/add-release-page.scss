@@ -1,0 +1,86 @@
+.page { display: grid; gap: 16px; }
+h1 { margin: 0; font-size: 28px; }
+.muted { color: var(--muted); margin: 6px 0 0; }
+
+.form { padding: 14px; }
+.grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.field { display: grid; gap: 6px; }
+.field.wide { grid-column: 1 / -1; }
+
+.label { font-size: 13px; color: var(--muted); }
+.hint { font-size: 12px; color: rgba(255, 91, 110, 0.9); }
+
+.input, .select {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  outline: none;
+}
+
+.actions { display: flex; justify-content: flex-end; margin-top: 10px; }
+
+.panel { padding: 14px; display: grid; gap: 10px; }
+.panel-head { display: flex; justify-content: space-between; align-items: center; }
+.panel-title { font-weight: 800; }
+
+.errbox {
+  border: 1px solid rgba(255, 91, 110, 0.35);
+  background: rgba(255, 91, 110, 0.10);
+  padding: 10px 12px;
+  border-radius: 12px;
+}
+.okbox {
+  border: 1px solid rgba(91, 140, 255, 0.35);
+  background: rgba(91, 140, 255, 0.10);
+  padding: 10px 12px;
+  border-radius: 12px;
+}
+
+.table {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 110px 1fr 70px 1.4fr 180px 120px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  gap: 10px;
+  align-items: center;
+}
+
+.headrow {
+  border-top: none;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.ep { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.right { display: flex; justify-content: flex-end; }
+
+.btn.danger {
+  border-color: rgba(255, 91, 110, 0.35);
+  background: rgba(255, 91, 110, 0.10);
+}
+
+@media (max-width: 900px) {
+  .grid { grid-template-columns: 1fr; }
+  .field.wide { grid-column: auto; }
+  .row { grid-template-columns: 110px 1fr; }
+  .right { justify-content: flex-start; }
+}
+.okbox {
+  border: 1px solid rgba(91, 255, 140, 0.35);
+  background: rgba(91, 255, 140, 0.10);
+  padding: 10px 12px;
+  border-radius: 12px;
+}

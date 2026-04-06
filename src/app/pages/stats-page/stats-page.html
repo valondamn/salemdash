@@ -1,105 +1,219 @@
 <div class="page">
+  <!-- Mode tabs -->
+  <div>
+    <h1>Stats</h1>
+  </div>
+  <div class="top-tabs">
+    <button class="tab" [class.active]="mode==='single'" (click)="setMode('single')">Single</button>
+    <button class="tab" [class.active]="mode==='compare'" (click)="setMode('compare')">Compare</button>
+  </div>
   <div class="page-head">
-    <div>
-      <h1>Stats</h1>
-      <p class="muted">YouTube stats from API</p>
-    </div>
+
 
     <div class="controls">
-      <select class="select" [(ngModel)]="selectedProjectId" (change)="onProjectChange()">
-        <option value="" disabled>Select project...</option>
-        <option *ngFor="let p of projects" [value]="p.id">
-          {{ p.name || p.utm_name || ('Project ' + p.id) }}
-        </option>
-      </select>
+      <!-- Source tabs -->
+      <div class="top-tabs">
+        <button class="tab" [class.active]="activeSource==='youtube'" (click)="setSource('youtube')">YouTube</button>
+        <button class="tab" [class.active]="activeSource==='yandex'" (click)="setSource('yandex')">Yandex Metrica</button>
+      </div>
 
-      <button class="btn" (click)="loadProjectInfo()" [disabled]="loadingInfo || !selectedProjectId">
+
+
+      <!-- ============ YOUTUBE SELECTS ============ -->
+      <ng-container *ngIf="activeSource==='youtube' && mode==='single'">
+        <select class="select" [(ngModel)]="selectedProjectId" (change)="onProjectChange()">
+          <option value="" disabled>Select project...</option>
+          <option *ngFor="let p of projects" [value]="p.id">
+            {{ p.name || p.utm_name || ('Project ' + p.id) }}
+          </option>
+        </select>
+      </ng-container>
+
+      <ng-container *ngIf="activeSource==='youtube' && mode==='compare'">
+        <select class="select" [(ngModel)]="projectAId" (change)="onCompareProjectsChange()">
+          <option value="" disabled>Project A...</option>
+          <option *ngFor="let p of projects" [value]="p.id">
+            {{ p.name || p.utm_name || ('Project ' + p.id) }}
+          </option>
+        </select>
+
+        <select class="select" [(ngModel)]="projectBId" (change)="onCompareProjectsChange()">
+          <option value="" disabled>Project B...</option>
+          <option *ngFor="let p of projects" [value]="p.id">
+            {{ p.name || p.utm_name || ('Project ' + p.id) }}
+          </option>
+        </select>
+      </ng-container>
+
+      <!-- ============ YANDEX SELECTS ============ -->
+      <ng-container *ngIf="activeSource==='yandex' && mode==='single'">
+        <select class="select" [(ngModel)]="selectedSlug" (change)="recalcYandex()">
+          <option value="" disabled>Select slug...</option>
+          <option *ngFor="let s of projectSlugs" [value]="s">{{ s }}</option>
+        </select>
+      </ng-container>
+
+      <ng-container *ngIf="activeSource==='yandex' && mode==='compare'">
+        <select class="select" [(ngModel)]="slugA" (change)="onCompareSlugsChange()">
+          <option value="" disabled>Slug A...</option>
+          <option *ngFor="let s of projectSlugs" [value]="s">{{ s }}</option>
+        </select>
+
+        <select class="select" [(ngModel)]="slugB" (change)="onCompareSlugsChange()">
+          <option value="" disabled>Slug B...</option>
+          <option *ngFor="let s of projectSlugs" [value]="s">{{ s }}</option>
+        </select>
+      </ng-container>
+
+      <button class="btn" (click)="onRefresh()" [disabled]="loadingInfo">
         {{ loadingInfo ? 'Loading…' : 'Refresh' }}
       </button>
     </div>
   </div>
 
   <div class="errbox" *ngIf="error">{{ error }}</div>
-  <section class="stats-grid" *ngIf="episodes.length">
-    <div class="stat card">
-      <div class="label">Episodes</div>
-      <div class="value">{{ episodes.length }}</div>
-      <div class="hint muted">items</div>
-    </div>
 
-    <div class="stat card">
-      <div class="label">Views</div>
-      <div class="value">{{ fmt(totalViews) }}</div>
-      <div class="hint muted">sum</div>
-    </div>
+  <!-- ===================== YOUTUBE SINGLE ===================== -->
+  <div class="main-content" *ngIf="activeSource==='youtube' && mode==='single'">
+    <section class="stats-grid" *ngIf="episodes.length">
+      <div class="stat card"><div class="label">Episodes</div><div class="value">{{ episodes.length }}</div><div class="hint muted">items</div></div>
+      <div class="stat card"><div class="label">Views</div><div class="value">{{ fmt(totalViews) }}</div><div class="hint muted">sum</div></div>
+      <div class="stat card"><div class="label">Likes</div><div class="value">{{ fmt(totalLikes) }}</div><div class="hint muted">sum</div></div>
+      <div class="stat card"><div class="label">Comments</div><div class="value">{{ fmt(totalComments) }}</div><div class="hint muted">sum</div></div>
+      <div class="stat card"><div class="label">Avg views / ep</div><div class="value">{{ fmt(avgViews) }}</div><div class="hint muted">average</div></div>
+      <div class="stat card"><div class="label">Engagement</div><div class="value">{{ fmtPct(engagementRate) }}</div><div class="hint muted">(likes+comments)/views</div></div>
+    </section>
 
-    <div class="stat card">
-      <div class="label">Likes</div>
-      <div class="value">{{ fmt(totalLikes) }}</div>
-      <div class="hint muted">sum</div>
-    </div>
+    <section class="grid-2">
+      <section class="card panel">
+        <div class="panel-head"><div class="panel-title">Engagement rate per episode</div><div class="muted">%</div></div>
+        <app-engagement-chart [episodes]="episodes"></app-engagement-chart>
+      </section>
 
-    <div class="stat card">
-      <div class="label">Comments</div>
-      <div class="value">{{ fmt(totalComments) }}</div>
-      <div class="hint muted">sum</div>
-    </div>
+      <section class="card panel">
+        <div class="panel-head"><div class="panel-title">Top episodes by views</div><div class="muted">Top 5</div></div>
 
-    <div class="stat card">
-      <div class="label">Avg views / ep</div>
-      <div class="value">{{ fmt(avgViews) }}</div>
-      <div class="hint muted">average</div>
-    </div>
-
-    <div class="stat card">
-      <div class="label">Engagement</div>
-      <div class="value">{{ fmtPct(engagementRate) }}</div>
-      <div class="hint muted">(likes+comments)/views</div>
-    </div>
-  </section>
-
-
-  <section class="grid-2">
-    <section class="card panel">
-      <div class="panel-head">
-        <div class="panel-title">Engagement rate per episode</div>
-        <div class="muted">%</div>
-      </div>
-      <app-engagement-chart [episodes]="episodes"></app-engagement-chart>
+        <div class="table">
+          <div class="row headrow"><div>Episode</div><div>Views</div><div>Likes</div><div>Comments</div></div>
+          <div class="row" *ngFor="let e of topEpisodes">
+            <div class="ep">{{ e.episode_name || '—' }}</div>
+            <div>{{ fmt(Number(e.youtube_views) || 0) }}</div>
+            <div>{{ fmt(Number(e.youtube_likes) || 0) }}</div>
+            <div>{{ fmt(Number(e.youtube_comments) || 0) }}</div>
+          </div>
+        </div>
+      </section>
     </section>
 
     <section class="card panel">
-      <div class="panel-head">
-        <div class="panel-title">Top episodes by views</div>
-        <div class="muted">Top 5</div>
+      <div class="panel-head"><div class="panel-title">Views / Likes / Comments per episode</div><div class="muted" *ngIf="loadingInfo">Loading…</div></div>
+      <app-episodes-chart [episodes]="episodes"></app-episodes-chart>
+    </section>
+  </div>
+
+  <!-- ===================== YOUTUBE COMPARE ===================== -->
+  <div class="main-content" *ngIf="activeSource==='youtube' && mode==='compare'">
+    <section class="compare-kpi">
+      <div class="card panel">
+        <div class="panel-head"><div class="panel-title">{{ getProjectNameById(projectAId) }}</div><div class="muted">A</div></div>
+        <div class="kpi-row"><span>Episodes</span><b>{{ kpiA.episodes }}</b></div>
+        <div class="kpi-row"><span>Views</span><b>{{ fmt(kpiA.views) }}</b></div>
+        <div class="kpi-row"><span>Likes</span><b>{{ fmt(kpiA.likes) }}</b></div>
+        <div class="kpi-row"><span>Comments</span><b>{{ fmt(kpiA.comments) }}</b></div>
+        <div class="kpi-row"><span>Avg views/ep</span><b>{{ fmt(kpiA.avgViews) }}</b></div>
+        <div class="kpi-row"><span>Engagement</span><b>{{ fmtPct(kpiA.engagement) }}</b></div>
       </div>
 
-      <div class="table">
-        <div class="row headrow">
-          <div>Episode</div>
-          <div>Views</div>
-          <div>Likes</div>
-          <div>Comments</div>
-        </div>
+      <div class="card panel">
+        <div class="panel-head"><div class="panel-title">{{ getProjectNameById(projectBId) }}</div><div class="muted">B</div></div>
+        <div class="kpi-row"><span>Episodes</span><b>{{ kpiB.episodes }}</b></div>
+        <div class="kpi-row"><span>Views</span><b>{{ fmt(kpiB.views) }}</b></div>
+        <div class="kpi-row"><span>Likes</span><b>{{ fmt(kpiB.likes) }}</b></div>
+        <div class="kpi-row"><span>Comments</span><b>{{ fmt(kpiB.comments) }}</b></div>
+        <div class="kpi-row"><span>Avg views/ep</span><b>{{ fmt(kpiB.avgViews) }}</b></div>
+        <div class="kpi-row"><span>Engagement</span><b>{{ fmtPct(kpiB.engagement) }}</b></div>
+      </div>
 
-        <div class="row" *ngFor="let e of topEpisodes">
-          <div class="ep">{{ e.episode_name || '—' }}</div>
-          <div>{{ fmt(Number(e.youtube_views) || 0) }}</div>
-          <div>{{ fmt(Number(e.youtube_likes) || 0) }}</div>
-          <div>{{ fmt(Number(e.youtube_comments) || 0) }}</div>
-        </div>
+      <div class="card panel">
+        <div class="panel-head"><div class="panel-title">Difference</div><div class="muted">A vs B</div></div>
+        <div class="kpi-row"><span>Views</span><b>{{ diffPct(kpiA.views, kpiB.views) }}</b></div>
+        <div class="kpi-row"><span>Likes</span><b>{{ diffPct(kpiA.likes, kpiB.likes) }}</b></div>
+        <div class="kpi-row"><span>Comments</span><b>{{ diffPct(kpiA.comments, kpiB.comments) }}</b></div>
+        <div class="kpi-row"><span>Avg views/ep</span><b>{{ diffPct(kpiA.avgViews, kpiB.avgViews) }}</b></div>
+        <div class="kpi-row"><span>Engagement</span><b>{{ diffPct(kpiA.engagement, kpiB.engagement) }}</b></div>
       </div>
     </section>
-  </section>
 
+    <section class="grid-2">
+      <section class="card panel">
+        <div class="panel-head"><div class="panel-title">Engagement (A)</div><div class="muted">{{ getProjectNameById(projectAId) }}</div></div>
+        <app-engagement-chart [episodes]="episodesA"></app-engagement-chart>
+      </section>
 
+      <section class="card panel">
+        <div class="panel-head"><div class="panel-title">Engagement (B)</div><div class="muted">{{ getProjectNameById(projectBId) }}</div></div>
+        <app-engagement-chart [episodes]="episodesB"></app-engagement-chart>
+      </section>
+    </section>
 
-  <section class="card panel">
-    <div class="panel-head">
-      <div class="panel-title">Views / Likes / Comments per episode</div>
-      <div class="muted" *ngIf="loadingInfo">Loading data…</div>
-    </div>
+    <section class="grid-2">
+      <section class="card panel">
+        <div class="panel-head"><div class="panel-title">Views/Likes/Comments (A)</div><div class="muted">{{ getProjectNameById(projectAId) }}</div></div>
+        <app-episodes-chart [episodes]="episodesA"></app-episodes-chart>
+      </section>
 
-    <app-episodes-chart [episodes]="episodes"></app-episodes-chart>
-  </section>
+      <section class="card panel">
+        <div class="panel-head"><div class="panel-title">Views/Likes/Comments (B)</div><div class="muted">{{ getProjectNameById(projectBId) }}</div></div>
+        <app-episodes-chart [episodes]="episodesB"></app-episodes-chart>
+      </section>
+    </section>
+  </div>
+
+  <!-- ===================== YANDEX SINGLE ===================== -->
+  <div class="main-content" *ngIf="activeSource==='yandex' && mode==='single'">
+    <section class="stats-grid">
+      <div class="stat card"><div class="label">Users</div><div class="value">{{ fmt(yandexUsers) }}</div><div class="hint muted">Yandex Metrica</div></div>
+      <div class="stat card"><div class="label">Visits</div><div class="value">{{ fmt(yandexVisits) }}</div><div class="hint muted">Yandex Metrica</div></div>
+    </section>
+
+    <section class="card panel">
+      <div class="panel-head"><div class="panel-title">Visits per series</div><div class="muted">{{ selectedSlug }}</div></div>
+      <app-yandex-visits-chart [rows]="visitsRows" [slug]="selectedSlug"></app-yandex-visits-chart>
+    </section>
+  </div>
+
+  <!-- ===================== YANDEX COMPARE ===================== -->
+  <div class="main-content" *ngIf="activeSource==='yandex' && mode==='compare'">
+    <section class="compare-kpi">
+      <div class="card panel">
+        <div class="panel-head"><div class="panel-title">{{ slugA }}</div><div class="muted">A</div></div>
+        <div class="kpi-row"><span>Users</span><b>{{ fmt(yandexA.users) }}</b></div>
+        <div class="kpi-row"><span>Visits</span><b>{{ fmt(yandexA.visits) }}</b></div>
+      </div>
+
+      <div class="card panel">
+        <div class="panel-head"><div class="panel-title">{{ slugB }}</div><div class="muted">B</div></div>
+        <div class="kpi-row"><span>Users</span><b>{{ fmt(yandexB.users) }}</b></div>
+        <div class="kpi-row"><span>Visits</span><b>{{ fmt(yandexB.visits) }}</b></div>
+      </div>
+
+      <div class="card panel">
+        <div class="panel-head"><div class="panel-title">Difference</div><div class="muted">A vs B</div></div>
+        <div class="kpi-row"><span>Users</span><b>{{ diffPct(yandexA.users, yandexB.users) }}</b></div>
+        <div class="kpi-row"><span>Visits</span><b>{{ diffPct(yandexA.visits, yandexB.visits) }}</b></div>
+      </div>
+    </section>
+
+    <section class="grid-2">
+      <section class="card panel">
+        <div class="panel-head"><div class="panel-title">Visits per series</div><div class="muted">{{ slugA }}</div></div>
+        <app-yandex-visits-chart [rows]="visitsRows" [slug]="slugA"></app-yandex-visits-chart>
+      </section>
+
+      <section class="card panel">
+        <div class="panel-head"><div class="panel-title">Visits per series</div><div class="muted">{{ slugB }}</div></div>
+        <app-yandex-visits-chart [rows]="visitsRows" [slug]="slugB"></app-yandex-visits-chart>
+      </section>
+    </section>
+  </div>
 </div>

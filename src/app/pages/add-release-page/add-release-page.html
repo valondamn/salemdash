@@ -1,0 +1,65 @@
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1>Add release</h1>
+      <p class="muted">Creates release via API</p>
+    </div>
+  </div>
+
+  <div class="okbox" *ngIf="success">{{ success }}</div>
+
+  <form class="card form" [formGroup]="form" (ngSubmit)="submit()">
+    <div class="grid">
+      <label class="field">
+        <span class="label">Release date</span>
+        <input class="input" type="date" formControlName="release_date" />
+        <span class="hint" *ngIf="form.get('release_date')?.touched && form.get('release_date')?.invalid">
+          Required
+        </span>
+      </label>
+
+      <label class="field">
+        <span class="label">Project</span>
+        <select class="select" formControlName="project_id" [disabled]="loadingProjects">
+          <option value="" disabled>Select project...</option>
+          <option *ngFor="let p of projects" [value]="p.id">
+            {{ p.name || p.utm_name || ('Project ' + p.id) }}
+          </option>
+        </select>
+        <span class="hint" *ngIf="form.get('project_id')?.touched && form.get('project_id')?.invalid">
+          Required
+        </span>
+      </label>
+
+      <label class="field">
+        <span class="label">Season</span>
+        <input class="input" type="number" min="1" formControlName="season" />
+        <span class="hint" *ngIf="form.get('season')?.touched && form.get('season')?.invalid">
+          Must be ≥ 1
+        </span>
+      </label>
+
+      <label class="field wide">
+        <span class="label">Episode name</span>
+        <input class="input" type="text" placeholder="Название видео" formControlName="episodes_name" />
+        <span class="hint" *ngIf="form.get('episodes_name')?.touched && form.get('episodes_name')?.invalid">
+          Required
+        </span>
+      </label>
+
+      <label class="field wide">
+        <span class="label">YouTube ID</span>
+        <input class="input" type="text" placeholder="youtube_id (например: dQw4w9WgXcQ)" formControlName="youtube_id" />
+        <span class="hint" *ngIf="form.get('youtube_id')?.touched && form.get('youtube_id')?.invalid">
+          Required
+        </span>
+      </label>
+    </div>
+
+    <div class="actions">
+      <button class="btn" type="submit" [disabled]="submitting || loadingProjects">
+        {{ submitting ? 'Saving…' : 'Save' }}
+      </button>
+    </div>
+  </form>
+</div>

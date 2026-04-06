@@ -16,6 +16,7 @@ export class MainLayoutComponent {
   tabs: TabDef[] = [
     { label: 'Dashboard', to: '/dashboard', icon: '📊' },
     { label: 'Stats', to: '/stats', icon: '📈' },
+    { label: 'Add release', to: '/add-release', icon: '+' },
     { label: 'Settings', to: '/settings', icon: '⚙️' },
   ];
 

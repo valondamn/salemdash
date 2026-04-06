@@ -1,4 +1,5 @@
 @import 'ngx-toastr/toastr';
+@import "@ng-select/ng-select/themes/default.theme.css";
 
 :root {
   --bg: #0b0f17;
@@ -72,3 +73,15 @@ a { color: inherit; text-decoration: none; }
   cursor: pointer;
 }
 .btn:hover { border-color: rgba(255,255,255,0.18); }
+
+select,
+select option,
+.select,
+.select option {
+  background-color: #111827 !important;
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+
+select {
+  color-scheme: dark;
+}

@@ -1,79 +1,142 @@
-<div class="page">
-  <div class="page-head">
-
-
-    <div class="controls">
-      <div>
-        <h1>Dashboard</h1>
+<div class="dashboard-page">
+  <header class="dashboard-page__head">
+    <div class="dashboard-page__controls">
+      <div class="dashboard-page__title-wrap">
+        <h1 class="dashboard-page__title">Дашборд</h1>
       </div>
+
       <select
-        class="select"
+        class="dashboard-page__select"
         [(ngModel)]="selectedProjectId"
         (change)="onProjectChange()"
         [disabled]="loadingProjects"
       >
-        <option value="" disabled>Select project...</option>
-
+        <option value="" disabled>Выберите проект...</option>
         <option *ngFor="let p of projects" [value]="p.id">
-          {{ p.name || p.utm_name || ('Project ' + p.id) }}
+          {{ p.name || p.utm_name || ('Проект ' + p.id) }}
         </option>
       </select>
 
-      <button class="btn" (click)="loadProjectInfo()" [disabled]="loadingInfo || !selectedProjectId">
-        {{ loadingInfo ? 'Loading…' : 'Refresh' }}
+      <button class="btn dashboard-page__refresh" (click)="loadProjectInfo()" [disabled]="loadingInfo || !selectedProjectId">
+        {{ loadingInfo ? 'Обновляем...' : 'Обновить' }}
       </button>
     </div>
-  </div>
+  </header>
 
-  <div class="errbox" *ngIf="error">{{ error }}</div>
+  <div class="dashboard-page__notice" *ngIf="error">{{ error }}</div>
 
-  <section class="stats-grid">
-    <div class="stat card">
-      <div class="label">Episodes</div>
-      <div class="value">{{ episodes.length }}</div>
-      <div class="hint muted">items from API</div>
+  <section class="dashboard-page__stats">
+    <div class="dashboard-page__stat card">
+      <div class="dashboard-page__label">Эпизоды</div>
+      <div class="dashboard-page__value">{{ episodes.length }}</div>
+      <div class="dashboard-page__hint">элементов из API</div>
     </div>
 
-    <div class="stat card">
-      <div class="label">Views</div>
-      <div class="value">{{ fmt(totalViews) }}</div>
-      <div class="hint muted">sum</div>
+    <div class="dashboard-page__stat card">
+      <div class="dashboard-page__label">Просмотры</div>
+      <div class="dashboard-page__value">{{ fmt(totalViews) }}</div>
+      <div class="dashboard-page__hint">сумма</div>
     </div>
 
-    <div class="stat card">
-      <div class="label">Likes</div>
-      <div class="value">{{ fmt(totalLikes) }}</div>
-      <div class="hint muted">sum</div>
+    <div class="dashboard-page__stat card">
+      <div class="dashboard-page__label">Лайки</div>
+      <div class="dashboard-page__value">{{ fmt(totalLikes) }}</div>
+      <div class="dashboard-page__hint">сумма</div>
     </div>
 
-    <div class="stat card">
-      <div class="label">Comments</div>
-      <div class="value">{{ fmt(totalComments) }}</div>
-      <div class="hint muted">sum</div>
+    <div class="dashboard-page__stat card">
+      <div class="dashboard-page__label">Комментарии</div>
+      <div class="dashboard-page__value">{{ fmt(totalComments) }}</div>
+      <div class="dashboard-page__hint">сумма</div>
     </div>
   </section>
 
-  <section class="card panel">
-    <div class="panel-head">
-      <div class="panel-title">Episodes</div>
-      <div class="muted" *ngIf="loadingInfo">Loading data…</div>
+  <section class="dashboard-page__panel card">
+    <div class="dashboard-page__panel-head">
+      <div class="dashboard-page__panel-title">Эпизоды</div>
+      <div class="dashboard-page__muted" *ngIf="loadingInfo">Загружаем данные...</div>
     </div>
 
-    <div class="table">
-      <div class="row headrow">
-        <div>Episode</div>
-        <div>Views</div>
-        <div>Likes</div>
-        <div>Comments</div>
-        <div>Release</div>
+    <div class="dashboard-page__table">
+      <div class="dashboard-page__row dashboard-page__row--head">
+        <div>Эпизод</div>
+        <div>Просмотры</div>
+        <div>Лайки</div>
+        <div>Комментарии</div>
+        <div>Релиз</div>
       </div>
 
-      <div class="row" *ngFor="let e of episodes.slice(0, 15)">
-        <div class="ep">{{ e.episode_name || '—' }}</div>
+      <div class="dashboard-page__row" *ngFor="let e of episodes.slice(0, 15)">
+        <div class="dashboard-page__episode">{{ e.episode_name || '—' }}</div>
         <div>{{ fmt(toNum(e.youtube_views) || 0) }}</div>
         <div>{{ fmt(toNum(e.youtube_likes) || 0) }}</div>
         <div>{{ fmt(toNum(e.youtube_comments) || 0) }}</div>
-        <div class="muted">{{ (e.youtube_release_date || e.release_date || '').slice(0, 10) || '—' }}</div>
+        <div class="dashboard-page__muted">{{ (e.youtube_release_date || e.release_date || '').slice(0, 10) || '—' }}</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="dashboard-page__notice" *ngIf="channelsError">{{ channelsError }}</div>
+
+  <section class="dashboard-page__panel card">
+    <div class="dashboard-page__panel-head">
+      <div class="dashboard-page__panel-title">Общие данные по каналам YouTube</div>
+      <div class="dashboard-page__muted" *ngIf="loadingChannels">Загружаем итоги...</div>
+    </div>
+
+    <section class="dashboard-page__stats dashboard-page__stats--channels">
+      <div class="dashboard-page__stat card">
+        <div class="dashboard-page__label">Каналы</div>
+        <div class="dashboard-page__value">{{ fmt(channels.length) }}</div>
+        <div class="dashboard-page__hint">связаны с API</div>
+      </div>
+
+      <div class="dashboard-page__stat card">
+        <div class="dashboard-page__label">Подписчики</div>
+        <div class="dashboard-page__value">{{ fmt(totalChannelSubscribers) }}</div>
+        <div class="dashboard-page__hint">по всем каналам</div>
+      </div>
+
+      <div class="dashboard-page__stat card">
+        <div class="dashboard-page__label">Просмотры</div>
+        <div class="dashboard-page__value">{{ fmt(totalChannelViews) }}</div>
+        <div class="dashboard-page__hint">по всем каналам</div>
+      </div>
+
+      <div class="dashboard-page__stat card">
+        <div class="dashboard-page__label">Лайки</div>
+        <div class="dashboard-page__value">{{ fmt(totalChannelLikes) }}</div>
+        <div class="dashboard-page__hint">по всем каналам</div>
+      </div>
+
+      <div class="dashboard-page__stat card">
+        <div class="dashboard-page__label">Комментарии</div>
+        <div class="dashboard-page__value">{{ fmt(totalChannelComments) }}</div>
+        <div class="dashboard-page__hint">по всем каналам</div>
+      </div>
+    </section>
+
+    <div class="dashboard-page__table dashboard-page__table--channels">
+      <div class="dashboard-page__row dashboard-page__row--head dashboard-page__row--channels">
+        <div>Канал</div>
+        <div>Подписчики</div>
+        <div>Просмотры</div>
+        <div>Лайки</div>
+        <div>Комментарии</div>
+        <div>Просмотры за квартал</div>
+      </div>
+
+      <div class="dashboard-page__row dashboard-page__row--channels" *ngFor="let channel of topChannels">
+        <div class="dashboard-page__episode">
+          <a class="dashboard-page__channel-link" [href]="channelUrl(channel.link)" target="_blank" rel="noreferrer">
+            {{ channel.name }}
+          </a>
+        </div>
+        <div>{{ fmt(channel.subs_count) }}</div>
+        <div>{{ fmt(channel.views_count) }}</div>
+        <div>{{ fmt(channel.likes_count) }}</div>
+        <div>{{ fmt(channel.comments_count) }}</div>
+        <div>{{ fmt(channel.quarter_views_count) }}</div>
       </div>
     </div>
   </section>

@@ -36,7 +36,7 @@ export class BarChartComponent implements AfterViewInit {
       grid: { left: 18, right: 18, top: 18, bottom: 18, containLabel: true },
       xAxis: {
         type: 'category',
-        data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        data: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
         axisLabel: { color: text },
         axisLine: { lineStyle: { color: axis } },
         axisTick: { show: false },
@@ -51,7 +51,7 @@ export class BarChartComponent implements AfterViewInit {
       series: [
         {
           type: 'bar',
-          name: 'Sessions',
+          name: 'Сессии',
           data: [320, 280, 410, 360, 390, 460, 520],
           itemStyle: { color: line, opacity: 0.9 },
           barWidth: 18,

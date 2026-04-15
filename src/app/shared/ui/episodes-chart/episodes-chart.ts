@@ -50,7 +50,7 @@ export class EpisodesChartComponent implements AfterViewInit, OnChanges {
   }
 
   private fmtCompact(n: number) {
-    return Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(n);
+    return Intl.NumberFormat('ru-RU', { notation: 'compact', maximumFractionDigits: 1 }).format(n);
   }
 
   private label(_: EpisodeInfo, idx: number): string {
@@ -60,7 +60,9 @@ export class EpisodesChartComponent implements AfterViewInit, OnChanges {
   private render() {
     if (!this.chart) return;
 
-    const line = this.cssVar('--chart-line') || '#5b8cff';
+    const line = this.cssVar('--chart-line') || '#22d3ee';
+    const lineSecondary = this.cssVar('--chart-danger') || '#fb7185';
+    const warm = this.cssVar('--chart-warm') || '#f59e0b';
     const grid = this.cssVar('--chart-grid') || 'rgba(255,255,255,0.08)';
     const axis = this.cssVar('--chart-axis') || 'rgba(255,255,255,0.10)';
     const text = this.cssVar('--chart-text') || 'rgba(255,255,255,0.70)';
@@ -93,9 +95,9 @@ export class EpisodesChartComponent implements AfterViewInit, OnChanges {
         <div style="max-width:360px">
           <div style="font-weight:800;margin-bottom:6px">${this.shortTitle(title, 60)}</div>
           <div style="opacity:.75;margin-bottom:8px">${date}</div>
-          <div>👁️ Views: <b>${this.fmtCompact(v)}</b></div>
-          <div>👍 Likes: <b>${this.fmtCompact(l)}</b></div>
-          <div>💬 Comments: <b>${this.fmtCompact(c)}</b></div>
+          <div>Просмотры: <b>${this.fmtCompact(v)}</b></div>
+          <div>Лайки: <b>${this.fmtCompact(l)}</b></div>
+          <div>Комментарии: <b>${this.fmtCompact(c)}</b></div>
         </div>
       `;
         },
@@ -110,6 +112,9 @@ export class EpisodesChartComponent implements AfterViewInit, OnChanges {
         top: 0,
         left: 0,
         textStyle: { color: text },
+        icon: 'roundRect',
+        itemWidth: 14,
+        itemHeight: 8,
       },
 
       grid: { left: 18, right: 18, top: 36, bottom: 18, containLabel: true },
@@ -135,7 +140,7 @@ export class EpisodesChartComponent implements AfterViewInit, OnChanges {
 
       series: [
         {
-          name: 'Views',
+          name: 'Просмотры',
           type: 'line',
           smooth: true,
           showSymbol: false,
@@ -145,20 +150,20 @@ export class EpisodesChartComponent implements AfterViewInit, OnChanges {
           areaStyle: { opacity: 0.12, color: line },
         },
         {
-          name: 'Likes',
+          name: 'Лайки',
           type: 'line',
           smooth: true,
           showSymbol: false,
           data: likes,
-          lineStyle: { width: 2, color: 'rgba(255,255,255,0.45)' },
-          itemStyle: { color: 'rgba(255,255,255,0.45)' },
-          areaStyle: { opacity: 0.06, color: 'rgba(255,255,255,0.45)' },
+          lineStyle: { width: 2, color: lineSecondary },
+          itemStyle: { color: lineSecondary },
+          areaStyle: { opacity: 0.08, color: lineSecondary },
         },
         {
-          name: 'Comments',
+          name: 'Комментарии',
           type: 'bar',
           data: comments,
-          itemStyle: { color: 'rgba(255,255,255,0.22)' },
+          itemStyle: { color: warm, opacity: 0.72 },
           barWidth: 10,
         },
       ],

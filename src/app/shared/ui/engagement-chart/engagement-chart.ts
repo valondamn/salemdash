@@ -46,7 +46,7 @@ export class EngagementChartComponent implements AfterViewInit, OnChanges {
     const grid = this.cssVar('--chart-grid') || 'rgba(255,255,255,0.08)';
     const axis = this.cssVar('--chart-axis') || 'rgba(255,255,255,0.10)';
     const text = this.cssVar('--chart-text') || 'rgba(255,255,255,0.70)';
-    const accent = this.cssVar('--chart-line') || '#5b8cff';
+    const accent = this.cssVar('--chart-success') || '#22c55e';
 
     const list = [...(this.episodes ?? [])]
       .sort((a, b) => this.pickDate(a).localeCompare(this.pickDate(b)));
@@ -78,11 +78,11 @@ export class EngagementChartComponent implements AfterViewInit, OnChanges {
       },
       series: [
         {
-          name: 'Engagement %',
+          name: 'Вовлечённость, %',
           type: 'bar',
           data: rate,
           barWidth: 12,
-          itemStyle: { color: accent, opacity: 0.85 },
+          itemStyle: { color: accent, opacity: 0.85, borderRadius: [10, 10, 0, 0] },
         },
       ],
     };

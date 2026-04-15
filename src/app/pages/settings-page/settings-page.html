@@ -1,19 +1,19 @@
-<div class="page">
-  <div class="head">
-    <h1>Settings</h1>
-    <p class="muted">Appearance & preferences</p>
-  </div>
+<div class="settings-page">
+  <header class="settings-page__header">
+    <h1 class="settings-page__title">Настройки</h1>
+    <p class="settings-page__subtitle">Оформление и базовые предпочтения интерфейса.</p>
+  </header>
 
-  <section class="card panel">
-    <div class="row">
+  <section class="settings-page__card card">
+    <div class="settings-page__row">
       <div>
-        <div class="label">Theme</div>
-        <div class="muted">Switch between dark and light</div>
+        <div class="settings-page__label">Тема</div>
+        <div class="settings-page__hint">Переключение между светлым и тёмным режимом</div>
       </div>
 
-      <div class="switch">
-        <button class="btn" [class.primary]="current === 'dark'" (click)="set('dark')">Dark</button>
-        <button class="btn" [class.primary]="current === 'light'" (click)="set('light')">Light</button>
+      <div class="settings-page__switch">
+        <button class="btn" [class.primary]="current === 'dark'" (click)="set('dark')">Тёмная</button>
+        <button class="btn" [class.primary]="current === 'light'" (click)="set('light')">Светлая</button>
       </div>
     </div>
   </section>

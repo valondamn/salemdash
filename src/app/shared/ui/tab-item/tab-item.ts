@@ -7,7 +7,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
   standalone: true,
   imports: [RouterLink, RouterLinkActive, NgIf],
   templateUrl: './tab-item.html',
-  styleUrl: './tab-item.scss',
+  styleUrl: 'tab-item.scss',
 })
 export class TabItemComponent {
   @Input({ required: true }) label!: string;

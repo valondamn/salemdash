@@ -34,7 +34,7 @@ export class YandexVisitsChartComponent implements AfterViewInit, OnChanges {
   }
 
   private fmtCompact(n: number) {
-    return Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(n);
+    return Intl.NumberFormat('ru-RU', { notation: 'compact', maximumFractionDigits: 1 }).format(n);
   }
 
   private render() {
@@ -43,7 +43,8 @@ export class YandexVisitsChartComponent implements AfterViewInit, OnChanges {
     const grid = this.cssVar('--chart-grid') || 'rgba(255,255,255,0.08)';
     const axis = this.cssVar('--chart-axis') || 'rgba(255,255,255,0.10)';
     const text = this.cssVar('--chart-text') || 'rgba(255,255,255,0.70)';
-    const accent = this.cssVar('--chart-line') || '#5b8cff';
+    const accent = this.cssVar('--chart-line') || '#22d3ee';
+    const accentSecondary = this.cssVar('--chart-success') || '#22c55e';
 
     const list = (this.rows ?? [])
       .filter(r => !this.slug || r.project_slug === this.slug)
@@ -67,8 +68,8 @@ export class YandexVisitsChartComponent implements AfterViewInit, OnChanges {
           return `
             <div style="min-width:180px">
               <div style="font-weight:800;margin-bottom:6px">${this.slug || 'project'} • ${x[i]}</div>
-              <div>👥 Users: <b>${this.fmtCompact(users[i] ?? 0)}</b></div>
-              <div>👣 Visits: <b>${this.fmtCompact(visits[i] ?? 0)}</b></div>
+              <div>Пользователи: <b>${this.fmtCompact(users[i] ?? 0)}</b></div>
+              <div>Визиты: <b>${this.fmtCompact(visits[i] ?? 0)}</b></div>
             </div>
           `;
         },
@@ -82,6 +83,9 @@ export class YandexVisitsChartComponent implements AfterViewInit, OnChanges {
         top: 0,
         left: 0,
         textStyle: { color: text },
+        icon: 'roundRect',
+        itemWidth: 14,
+        itemHeight: 8,
       },
       grid: { left: 18, right: 18, top: 36, bottom: 18, containLabel: true },
       xAxis: {
@@ -94,7 +98,7 @@ export class YandexVisitsChartComponent implements AfterViewInit, OnChanges {
       yAxis: [
         {
           type: 'value',
-          name: 'Visits',
+          name: 'Визиты',
           axisLabel: { color: text, formatter: (v: any) => this.fmtCompact(Number(v) || 0) },
           splitLine: { lineStyle: { color: grid } },
           axisLine: { lineStyle: { color: axis } },
@@ -102,7 +106,7 @@ export class YandexVisitsChartComponent implements AfterViewInit, OnChanges {
         },
         {
           type: 'value',
-          name: 'Users',
+          name: 'Пользователи',
           axisLabel: { color: text, formatter: (v: any) => this.fmtCompact(Number(v) || 0) },
           splitLine: { show: false },
           axisLine: { lineStyle: { color: axis } },
@@ -111,21 +115,21 @@ export class YandexVisitsChartComponent implements AfterViewInit, OnChanges {
       ],
       series: [
         {
-          name: 'Visits',
+          name: 'Визиты',
           type: 'bar',
           data: visits,
           barWidth: 12,
-          itemStyle: { color: accent, opacity: 0.75 },
+          itemStyle: { color: accent, opacity: 0.8, borderRadius: [10, 10, 0, 0] },
         },
         {
-          name: 'Users',
+          name: 'Пользователи',
           type: 'line',
           yAxisIndex: 1,
           smooth: true,
           showSymbol: false,
           data: users,
-          lineStyle: { width: 3, color: 'rgba(255,255,255,0.55)' },
-          itemStyle: { color: 'rgba(255,255,255,0.55)' },
+          lineStyle: { width: 3, color: accentSecondary },
+          itemStyle: { color: accentSecondary },
         },
       ],
     };

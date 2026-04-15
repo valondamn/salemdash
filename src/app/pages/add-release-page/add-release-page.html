@@ -1,64 +1,112 @@
-<div class="page">
-  <div class="page-head">
+<div class="release-page">
+  <header class="release-page__header">
     <div>
-      <h1>Add release</h1>
-      <p class="muted">Creates release via API</p>
+      <h1 class="release-page__title">Добавление релиза</h1>
+      <p class="release-page__subtitle">
+        Выберите проект, задайте сезон и найдите нужное видео. Название, YouTube ID и дата релиза подтянутся
+        автоматически из API.
+      </p>
     </div>
-  </div>
+  </header>
 
-  <div class="okbox" *ngIf="success">{{ success }}</div>
+  <div class="release-page__notice release-page__notice--error" *ngIf="error">{{ error }}</div>
+  <div class="release-page__notice release-page__notice--success" *ngIf="success">{{ success }}</div>
 
-  <form class="card form" [formGroup]="form" (ngSubmit)="submit()">
-    <div class="grid">
-      <label class="field">
-        <span class="label">Release date</span>
-        <input class="input" type="date" formControlName="release_date" />
-        <span class="hint" *ngIf="form.get('release_date')?.touched && form.get('release_date')?.invalid">
-          Required
-        </span>
-      </label>
-
-      <label class="field">
-        <span class="label">Project</span>
-        <select class="select" formControlName="project_id" [disabled]="loadingProjects">
-          <option value="" disabled>Select project...</option>
+  <form class="release-form card" [formGroup]="form" (ngSubmit)="submit()">
+    <div class="release-form__filters">
+      <label class="release-form__field release-form__field--project">
+        <span class="release-form__label">Проект</span>
+        <select class="release-form__control release-form__control--select" formControlName="project_id" [disabled]="loadingProjects">
+          <option value="" disabled>Выберите проект...</option>
           <option *ngFor="let p of projects" [value]="p.id">
-            {{ p.name || p.utm_name || ('Project ' + p.id) }}
+            {{ getProjectLabel(p) }}
           </option>
         </select>
-        <span class="hint" *ngIf="form.get('project_id')?.touched && form.get('project_id')?.invalid">
-          Required
+        <span class="release-form__hint" *ngIf="form.get('project_id')?.touched && form.get('project_id')?.invalid">
+          Обязательное поле
         </span>
       </label>
 
-      <label class="field">
-        <span class="label">Season</span>
-        <input class="input" type="number" min="1" formControlName="season" />
-        <span class="hint" *ngIf="form.get('season')?.touched && form.get('season')?.invalid">
-          Must be ≥ 1
+      <label class="release-form__field release-form__field--season">
+        <span class="release-form__label">Сезон</span>
+        <input class="release-form__control release-form__control--input" type="number" min="1" formControlName="season" />
+        <span class="release-form__hint" *ngIf="form.get('season')?.touched && form.get('season')?.invalid">
+          Значение должно быть не меньше 1
         </span>
       </label>
 
-      <label class="field wide">
-        <span class="label">Episode name</span>
-        <input class="input" type="text" placeholder="Название видео" formControlName="episodes_name" />
-        <span class="hint" *ngIf="form.get('episodes_name')?.touched && form.get('episodes_name')?.invalid">
-          Required
-        </span>
-      </label>
-
-      <label class="field wide">
-        <span class="label">YouTube ID</span>
-        <input class="input" type="text" placeholder="youtube_id (например: dQw4w9WgXcQ)" formControlName="youtube_id" />
-        <span class="hint" *ngIf="form.get('youtube_id')?.touched && form.get('youtube_id')?.invalid">
-          Required
-        </span>
+      <label class="release-form__field release-form__field--search">
+        <span class="release-form__label">Поиск видео</span>
+        <input
+          class="release-form__control release-form__control--input"
+          type="text"
+          placeholder="Название, канал, ID YouTube или дата"
+          formControlName="video_query"
+          [disabled]="loadingVideos || !videos.length"
+        />
       </label>
     </div>
 
-    <div class="actions">
-      <button class="btn" type="submit" [disabled]="submitting || loadingProjects">
-        {{ submitting ? 'Saving…' : 'Save' }}
+    <div class="release-form__status">
+      <span class="release-form__status-item" *ngIf="loadingVideos">Загружаем видео выбранного проекта...</span>
+      <span class="release-form__status-item" *ngIf="!loadingVideos && videos.length">
+        Показано {{ filteredVideos.length }} из {{ videos.length }} видео
+      </span>
+      <span class="release-form__status-item" *ngIf="!loadingVideos && !videos.length && form.value.project_id">
+        Для этого проекта видео не найдены
+      </span>
+      <span class="release-form__selected" *ngIf="selectedVideo as video">
+        Выбрано: <b>{{ getVideoName(video) }}</b>
+        <span class="release-form__selected-meta">{{ formatDate(getVideoDate(video)) }}</span>
+      </span>
+    </div>
+
+    <section class="release-form__picker card">
+      <div class="release-form__picker-head">
+        <div>
+          <div class="release-form__picker-title">Список видео</div>
+          <p class="release-form__picker-copy">
+            В карточке уже лежат название, канал, YouTube ID и дата релиза. Просто нажмите на нужное видео.
+          </p>
+        </div>
+      </div>
+
+      <div class="release-form__empty" *ngIf="!loadingVideos && !filteredVideos.length">
+        Ничего не подошло под текущие фильтры.
+      </div>
+
+      <div class="release-form__list" *ngIf="filteredVideos.length">
+        <button
+          type="button"
+          class="release-form__video"
+          *ngFor="let video of filteredVideos; trackBy: trackByVideo"
+          [class.release-form__video--selected]="isSelected(video)"
+          (click)="selectVideo(video)"
+        >
+          <div class="release-form__video-main">
+            <div class="release-form__video-title">{{ getVideoName(video) }}</div>
+            <div class="release-form__video-meta">
+              <span>{{ getVideoChannel(video) || 'Неизвестный канал' }}</span>
+              <span>ID: {{ getVideoId(video) || '—' }}</span>
+              <span *ngIf="getVideoSeason(video)">Сезон {{ getVideoSeason(video) }}</span>
+            </div>
+          </div>
+
+          <div class="release-form__video-side">
+            <span class="release-form__video-date">{{ formatDate(getVideoDate(video)) }}</span>
+            <span class="release-form__video-badge" *ngIf="isSelected(video)">Выбрано</span>
+          </div>
+        </button>
+      </div>
+
+      <span class="release-form__hint" *ngIf="form.get('selected_video_id')?.touched && form.get('selected_video_id')?.invalid">
+        Выберите видео перед сохранением
+      </span>
+    </section>
+
+    <div class="release-form__actions">
+      <button class="btn release-form__submit" type="submit" [disabled]="submitting || loadingProjects || loadingVideos || !selectedVideo">
+        {{ submitting ? 'Сохраняем...' : 'Сохранить релиз' }}
       </button>
     </div>
   </form>

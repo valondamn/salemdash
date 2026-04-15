@@ -53,7 +53,7 @@ export class LineChartComponent implements AfterViewInit {
       xAxis: {
         type: 'category',
         boundaryGap: false,
-        data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        data: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
         axisLabel: { color: text },
         axisLine: { lineStyle: { color: axis } },
         axisTick: { show: false },
@@ -67,7 +67,7 @@ export class LineChartComponent implements AfterViewInit {
       },
       series: [
         {
-          name: 'Users',
+          name: 'Пользователи',
           type: 'line',
           smooth: true,
           showSymbol: false,
@@ -77,7 +77,7 @@ export class LineChartComponent implements AfterViewInit {
           areaStyle: { opacity: 0.12, color: line },
         },
         {
-          name: 'Revenue',
+          name: 'Выручка',
           type: 'line',
           smooth: true,
           showSymbol: false,

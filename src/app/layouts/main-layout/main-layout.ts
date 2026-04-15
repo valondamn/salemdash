@@ -14,10 +14,10 @@ import { AuthService } from '../../shared/services/auth';
 })
 export class MainLayoutComponent {
   tabs: TabDef[] = [
-    { label: 'Dashboard', to: '/dashboard', icon: '📊' },
-    { label: 'Stats', to: '/stats', icon: '📈' },
-    { label: 'Add release', to: '/add-release', icon: '+' },
-    { label: 'Settings', to: '/settings', icon: '⚙️' },
+    { label: 'Дашборд', to: '/dashboard', icon: '📊' },
+    { label: 'Статистика', to: '/stats', icon: '📈' },
+    { label: 'Добавить релиз', to: '/add-release', icon: '+' },
+    { label: 'Настройки', to: '/settings', icon: '⚙️' },
   ];
 
   constructor(private auth: AuthService, private router: Router) {}
@@ -26,8 +26,5 @@ export class MainLayoutComponent {
     this.auth.logout();
     this.router.navigateByUrl('/login');
   }
-
 }
-
-
 

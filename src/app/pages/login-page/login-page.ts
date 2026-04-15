@@ -37,7 +37,8 @@ export class LoginPageComponent {
 
     try {
       await this.auth.login(email, password);
-      await this.router.navigateByUrl('/dashboard', { replaceUrl: true });    } catch (e: any) {
+      await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
+    } catch (e: any) {
       this.error = e?.message ?? 'Ошибка входа';
     } finally {
       this.loading = false;

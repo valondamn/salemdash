@@ -1,25 +1,21 @@
-<div class="app-shell">
-  <aside class="sidebar">
-    <div class="brand">SD</div>
-    <app-tabs class="tabs-slot" [tabs]="tabs"></app-tabs>
-    <button class="btn" (click)="logout()">Logout</button>
-
+<div class="main-layout">
+  <aside class="main-layout__sidebar">
+    <div class="main-layout__brand">SD</div>
+    <app-tabs class="main-layout__tabs" [tabs]="tabs"></app-tabs>
+    <button class="btn main-layout__logout" (click)="logout()">Выйти</button>
   </aside>
 
-  <div class="main">
-    <header class="topbar">
-      <div class="title">Salem</div>
+  <div class="main-layout__content">
+    <header class="main-layout__topbar">
+      <div class="main-layout__title">Salem</div>
 
-
-      <div class="actions">
-        <button class="btn">Quick action</button>
+      <div class="main-layout__actions">
+        <button class="btn">Быстрое действие</button>
       </div>
     </header>
 
-    <main class="content">
+    <main class="main-layout__page">
       <router-outlet></router-outlet>
     </main>
-
   </div>
-
 </div>

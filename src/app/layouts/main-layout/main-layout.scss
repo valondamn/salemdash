@@ -1,19 +1,19 @@
-.app-shell {
+.main-layout {
   min-height: 100vh;
   display: grid;
   grid-template-columns: 260px 1fr;
 }
 
-.sidebar {
+.main-layout__sidebar {
   padding: 16px;
   border-right: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.02);
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto 1fr auto;
   gap: 14px;
 }
 
-.brand {
+.main-layout__brand {
   height: 44px;
   display: flex;
   align-items: center;
@@ -22,12 +22,21 @@
   letter-spacing: 0.3px;
 }
 
-.main {
-  display: grid;
-  grid-template-rows: 64px 1fr;
+.main-layout__tabs {
+  min-height: 0;
 }
 
-.topbar {
+.main-layout__logout {
+  width: 100%;
+}
+
+.main-layout__content {
+  display: grid;
+  grid-template-rows: 64px 1fr;
+  min-width: 0;
+}
+
+.main-layout__topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -36,10 +45,27 @@
   background: rgba(255, 255, 255, 0.02);
 }
 
-.title {
+.main-layout__title {
   font-weight: 900;
 }
 
-.content {
+.main-layout__page {
   padding: 16px;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .main-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .main-layout__sidebar {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    grid-template-columns: 1fr;
+  }
+
+  .main-layout__logout {
+    max-width: 220px;
+  }
 }

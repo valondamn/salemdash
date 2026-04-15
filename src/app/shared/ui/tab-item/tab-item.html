@@ -1,7 +1,7 @@
-<a class="tab"
+<a class="tab-item"
    [routerLink]="to"
-   routerLinkActive="active"
+   routerLinkActive="tab-item--active"
    [routerLinkActiveOptions]="{ exact: true }">
-  <span class="icon" *ngIf="icon">{{ icon }}</span>
-  <span class="label">{{ label }}</span>
+  <span class="tab-item__icon" *ngIf="icon">{{ icon }}</span>
+  <span class="tab-item__label">{{ label }}</span>
 </a>

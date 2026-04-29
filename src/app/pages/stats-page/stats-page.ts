@@ -8,15 +8,18 @@ import {
   Project,
   EpisodeInfo,
   UnifiedVisitsRow,
+  InstagramAccount,
 } from '../../shared/services/ssm-api.service';
 
 import { EpisodesChartComponent } from '../../shared/ui/episodes-chart/episodes-chart';
 import { EngagementChartComponent } from '../../shared/ui/engagement-chart/engagement-chart';
 import { YandexVisitsChartComponent } from '../../shared/ui/yandex-visits-chart/yandex-visits-chart';
 import { ComparisonLineChartComponent } from '../../shared/ui/comparison-line-chart/comparison-line-chart';
+import { InstagramEngagementPieChartComponent } from '../../shared/ui/instagram-engagement-pie-chart/instagram-engagement-pie-chart';
+import { InstagramCompareBarChartComponent } from '../../shared/ui/instagram-compare-bar-chart/instagram-compare-bar-chart';
 
 type Mode = 'single' | 'compare';
-type Source = 'youtube' | 'yandex';
+type Source = 'youtube' | 'yandex' | 'instagram';
 type MetricFormat = 'number' | 'percent' | 'decimal';
 type MetricTone = 'positive' | 'negative' | 'neutral';
 type MetricWinner = 'a' | 'b' | 'tie';
@@ -43,6 +46,8 @@ type CompareMetricRow = {
     EngagementChartComponent,
     YandexVisitsChartComponent,
     ComparisonLineChartComponent,
+    InstagramEngagementPieChartComponent,
+    InstagramCompareBarChartComponent,
   ],
   templateUrl: './stats-page.html',
   styleUrl: './stats-page.scss',
@@ -83,6 +88,11 @@ export class StatsPageComponent implements OnInit {
   yandexA = { users: 0, visits: 0, visitsPerUser: 0 };
   yandexB = { users: 0, visits: 0, visitsPerUser: 0 };
 
+  instagramAccounts: InstagramAccount[] = [];
+  selectedInstagramId = '';
+  instagramAId = '';
+  instagramBId = '';
+
   loadingInfo = false;
   error: string | null = null;
 
@@ -91,6 +101,7 @@ export class StatsPageComponent implements OnInit {
   ngOnInit(): void {
     this.loadProjects();
     this.loadVisits();
+    this.loadInstagramAccounts();
   }
 
   setSource(source: Source) {
@@ -99,16 +110,20 @@ export class StatsPageComponent implements OnInit {
     if (this.mode === 'compare') {
       if (source === 'youtube') {
         this.loadCompareYouTube();
-      } else {
+      } else if (source === 'yandex') {
         this.recalcCompareYandex();
+      } else {
+        this.ensureInstagramDefaults();
       }
       return;
     }
 
     if (source === 'youtube') {
       this.loadProjectInfo();
-    } else {
+    } else if (source === 'yandex') {
       this.recalcYandex();
+    } else {
+      this.ensureInstagramDefaults();
     }
   }
 
@@ -121,19 +136,23 @@ export class StatsPageComponent implements OnInit {
         if (!this.projectBId && this.projects.length > 1) this.projectBId = String(this.projects[1].id);
         if (!this.projectBId && this.projects.length) this.projectBId = String(this.projects[0].id);
         this.loadCompareYouTube();
-      } else {
+      } else if (this.activeSource === 'yandex') {
         if (!this.slugA && this.projectSlugs.length) this.slugA = this.projectSlugs[0];
         if (!this.slugB && this.projectSlugs.length > 1) this.slugB = this.projectSlugs[1];
         if (!this.slugB && this.projectSlugs.length) this.slugB = this.projectSlugs[0];
         this.recalcCompareYandex();
+      } else {
+        this.ensureInstagramDefaults();
       }
       return;
     }
 
     if (this.activeSource === 'youtube') {
       this.loadProjectInfo();
-    } else {
+    } else if (this.activeSource === 'yandex') {
       this.recalcYandex();
+    } else {
+      this.ensureInstagramDefaults();
     }
   }
 
@@ -141,10 +160,16 @@ export class StatsPageComponent implements OnInit {
     if (this.activeSource === 'youtube') {
       if (this.mode === 'single') this.loadProjectInfo();
       else this.loadCompareYouTube();
-    } else {
+      return;
+    }
+
+    if (this.activeSource === 'yandex') {
       if (this.mode === 'single') this.recalcYandex();
       else this.recalcCompareYandex();
+      return;
     }
+
+    this.loadInstagramAccounts();
   }
 
   loadProjects() {
@@ -216,10 +241,7 @@ export class StatsPageComponent implements OnInit {
     this.error = null;
     this.cdr.detectChanges();
 
-    forkJoin([
-      this.api.getProjectInfo(aId),
-      this.api.getProjectInfo(bId),
-    ]).subscribe({
+    forkJoin([this.api.getProjectInfo(aId), this.api.getProjectInfo(bId)]).subscribe({
       next: ([projectA, projectB]) => {
         this.episodesA = projectA ?? [];
         this.episodesB = projectB ?? [];
@@ -262,6 +284,26 @@ export class StatsPageComponent implements OnInit {
     });
   }
 
+  loadInstagramAccounts() {
+    this.loadingInfo = true;
+    this.error = null;
+    this.cdr.detectChanges();
+
+    this.api.getInstagramAccounts().subscribe({
+      next: (items) => {
+        this.instagramAccounts = [...(items ?? [])].sort((a, b) => b.followers - a.followers);
+        this.ensureInstagramDefaults();
+        this.loadingInfo = false;
+        this.cdr.detectChanges();
+      },
+      error: (e: any) => {
+        this.error = e?.message ?? 'Не удалось загрузить данные Instagram';
+        this.loadingInfo = false;
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
   recalcYandex() {
     const list = this.seriesRowsForSlug(this.selectedSlug);
     this.yandexUsers = list.reduce((sum, row) => sum + (Number(row.yandex_users) || 0), 0);
@@ -295,6 +337,18 @@ export class StatsPageComponent implements OnInit {
     };
   }
 
+  get selectedInstagramAccount(): InstagramAccount | null {
+    return this.findInstagramAccount(this.selectedInstagramId);
+  }
+
+  get instagramAccountA(): InstagramAccount | null {
+    return this.findInstagramAccount(this.instagramAId);
+  }
+
+  get instagramAccountB(): InstagramAccount | null {
+    return this.findInstagramAccount(this.instagramBId);
+  }
+
   get youtubeCompareRows(): CompareMetricRow[] {
     return [
       this.buildCompareMetric('views', 'Просмотры', this.kpiA.views, this.kpiB.views, 'number'),
@@ -310,7 +364,31 @@ export class StatsPageComponent implements OnInit {
     return [
       this.buildCompareMetric('users', 'Пользователи', this.yandexA.users, this.yandexB.users, 'number'),
       this.buildCompareMetric('visits', 'Визиты', this.yandexA.visits, this.yandexB.visits, 'number'),
-      this.buildCompareMetric('visitsPerUser', 'Визитов на пользователя', this.yandexA.visitsPerUser, this.yandexB.visitsPerUser, 'decimal'),
+      this.buildCompareMetric(
+        'visitsPerUser',
+        'Визитов на пользователя',
+        this.yandexA.visitsPerUser,
+        this.yandexB.visitsPerUser,
+        'decimal'
+      ),
+    ];
+  }
+
+  get instagramCompareRows(): CompareMetricRow[] {
+    const a = this.instagramAccountA;
+    const b = this.instagramAccountB;
+
+    return [
+      this.buildCompareMetric('followers', 'Подписчики', a?.followers || 0, b?.followers || 0, 'number'),
+      this.buildCompareMetric('posts', 'Посты', a?.posts || 0, b?.posts || 0, 'number'),
+      this.buildCompareMetric('viewsTotal', 'Просмотры', a?.views_total || 0, b?.views_total || 0, 'number'),
+      this.buildCompareMetric('likesTotal', 'Лайки', a?.likes_total || 0, b?.likes_total || 0, 'number'),
+      this.buildCompareMetric('commentsTotal', 'Комментарии', a?.comments_total || 0, b?.comments_total || 0, 'number'),
+      this.buildCompareMetric('savedTotal', 'Сохранения', a?.saved_total || 0, b?.saved_total || 0, 'number'),
+      this.buildCompareMetric('viewsDay', 'Просмотры за день', a?.views_day || 0, b?.views_day || 0, 'number'),
+      this.buildCompareMetric('likesDay', 'Лайки за день', a?.likes_day || 0, b?.likes_day || 0, 'number'),
+      this.buildCompareMetric('commentsDay', 'Комментарии за день', a?.comments_day || 0, b?.comments_day || 0, 'number'),
+      this.buildCompareMetric('savedDay', 'Сохранения за день', a?.saved_day || 0, b?.saved_day || 0, 'number'),
     ];
   }
 
@@ -360,22 +438,64 @@ export class StatsPageComponent implements OnInit {
     return this.seriesRowsForSlug(this.slugB).map((row) => Number(row.yandex_users) || 0);
   }
 
+  get instagramPerPostLabels(): string[] {
+    return ['Просмотры / пост', 'Лайки / пост', 'Комментарии / пост', 'Сохранения / пост'];
+  }
+
+  get instagramPerPostSeriesA(): Array<number | null> {
+    return this.instagramPerPostSeries(this.instagramAccountA);
+  }
+
+  get instagramPerPostSeriesB(): Array<number | null> {
+    return this.instagramPerPostSeries(this.instagramAccountB);
+  }
+
+  getSourceDescription() {
+    if (this.activeSource === 'youtube') {
+      return 'Показатели по эпизодам YouTube: просмотры, лайки, комментарии и вовлечённость.';
+    }
+
+    if (this.activeSource === 'yandex') {
+      return 'Данные Яндекс Метрики по сериям: визиты и пользователи.';
+    }
+
+    return 'Сводные метрики Instagram по аккаунтам: подписчики, охваты, лайки, комментарии и сохранения.';
+  }
+
   getSingleHeadline() {
-    return this.activeSource === 'youtube'
-      ? `${this.getProjectNameById(this.selectedProjectId)} — обзор`
-      : `${this.getSlugLabel(this.selectedSlug)} — обзор`;
+    if (this.activeSource === 'youtube') {
+      return `${this.getProjectNameById(this.selectedProjectId)} — обзор`;
+    }
+
+    if (this.activeSource === 'yandex') {
+      return `${this.getSlugLabel(this.selectedSlug)} — обзор`;
+    }
+
+    return `${this.getInstagramLabelById(this.selectedInstagramId)} — обзор`;
   }
 
   getComparePrimaryLabel() {
-    return this.activeSource === 'youtube'
-      ? this.getProjectNameById(this.projectAId)
-      : this.getSlugLabel(this.slugA);
+    if (this.activeSource === 'youtube') {
+      return this.getProjectNameById(this.projectAId);
+    }
+
+    if (this.activeSource === 'yandex') {
+      return this.getSlugLabel(this.slugA);
+    }
+
+    return this.getInstagramLabelById(this.instagramAId);
   }
 
   getCompareSecondaryLabel() {
-    return this.activeSource === 'youtube'
-      ? this.getProjectNameById(this.projectBId)
-      : this.getSlugLabel(this.slugB);
+    if (this.activeSource === 'youtube') {
+      return this.getProjectNameById(this.projectBId);
+    }
+
+    if (this.activeSource === 'yandex') {
+      return this.getSlugLabel(this.slugB);
+    }
+
+    return this.getInstagramLabelById(this.instagramBId);
   }
 
   getCompareSummary(rows: CompareMetricRow[], labelA: string, labelB: string) {
@@ -448,6 +568,37 @@ export class StatsPageComponent implements OnInit {
 
   getSlugLabel(slug: string) {
     return slug ? slug.replace(/[_-]+/g, ' ') : 'Проект';
+  }
+
+  getInstagramLabelById(id: string) {
+    const account = this.findInstagramAccount(id);
+    return account?.page_name || (account?.username ? `@${account.username}` : 'Instagram аккаунт');
+  }
+
+  instagramUrl(username: string) {
+    return username ? `https://www.instagram.com/${username}/` : '#';
+  }
+
+  private ensureInstagramDefaults() {
+    if (!this.selectedInstagramId && this.instagramAccounts.length) {
+      this.selectedInstagramId = this.instagramAccounts[0].id;
+    }
+
+    if (!this.instagramAId && this.instagramAccounts.length) {
+      this.instagramAId = this.instagramAccounts[0].id;
+    }
+
+    if (!this.instagramBId && this.instagramAccounts.length > 1) {
+      this.instagramBId = this.instagramAccounts[1].id;
+    }
+
+    if (!this.instagramBId && this.instagramAccounts.length) {
+      this.instagramBId = this.instagramAccounts[0].id;
+    }
+  }
+
+  private findInstagramAccount(id: string) {
+    return this.instagramAccounts.find((account) => account.id === id) ?? null;
   }
 
   private computeYouTubeSingle() {
@@ -526,5 +677,19 @@ export class StatsPageComponent implements OnInit {
     const likes = Number(episode.youtube_likes) || 0;
     const comments = Number(episode.youtube_comments) || 0;
     return views ? ((likes + comments) / views) * 100 : 0;
+  }
+
+  private instagramPerPostSeries(account: InstagramAccount | null): Array<number | null> {
+    if (!account) return [0, 0, 0, 0];
+
+    const posts = account.posts || 0;
+    const avg = (value: number) => (posts > 0 ? value / posts : 0);
+
+    return [
+      avg(account.views_total),
+      avg(account.likes_total),
+      avg(account.comments_total),
+      avg(account.saved_total),
+    ];
   }
 }

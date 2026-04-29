@@ -4,20 +4,21 @@
       <span class="eyebrow">{{ mode === 'compare' ? 'Режим сравнения' : 'Аналитика' }}</span>
       <h1>Статистика</h1>
       <p class="hero-text">
-        Переключайтесь между данными YouTube и Яндекса, сравнивайте два проекта рядом и быстро считывайте
+        Переключайтесь между данными YouTube, Яндекса и Instagram, сравнивайте наборы рядом и быстро считывайте
         лидеров без лишних таблиц.
       </p>
     </div>
 
     <div class="hero-actions">
       <div class="top-tabs">
-        <button class="tab" [class.active]="mode === 'single'" (click)="setMode('single')">Один проект</button>
-        <button class="tab" [class.active]="mode === 'compare'" (click)="setMode('compare')">Сравнение проектов</button>
+        <button class="tab" [class.active]="mode === 'single'" (click)="setMode('single')">Один набор</button>
+        <button class="tab" [class.active]="mode === 'compare'" (click)="setMode('compare')">Сравнение</button>
       </div>
 
       <div class="top-tabs source-tabs">
         <button class="tab" [class.active]="activeSource === 'youtube'" (click)="setSource('youtube')">YouTube</button>
         <button class="tab" [class.active]="activeSource === 'yandex'" (click)="setSource('yandex')">Яндекс</button>
+        <button class="tab" [class.active]="activeSource === 'instagram'" (click)="setSource('instagram')">Instagram</button>
       </div>
     </div>
   </section>
@@ -26,13 +27,7 @@
     <div class="control-head">
       <div>
         <div class="section-title">{{ mode === 'compare' ? 'Выберите два набора данных для сравнения' : 'Выберите набор данных' }}</div>
-        <p class="muted">
-          {{
-            activeSource === 'youtube'
-              ? 'Показатели по эпизодам YouTube: просмотры, лайки, комментарии и вовлечённость.'
-              : 'Данные Яндекс Метрики по сериям: визиты и пользователи.'
-          }}
-        </p>
+        <p class="muted">{{ getSourceDescription() }}</p>
       </div>
 
       <button class="btn accent-btn" (click)="onRefresh()" [disabled]="loadingInfo">
@@ -98,6 +93,40 @@
         <select class="select compact-select accent-b" [(ngModel)]="slugB" (change)="onCompareSlugsChange()">
           <option value="" disabled>Проект B...</option>
           <option *ngFor="let slug of projectSlugs" [value]="slug">{{ getSlugLabel(slug) }}</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="control-grid" *ngIf="activeSource === 'instagram' && mode === 'single'">
+      <label class="control-item">
+        <span class="control-label">Instagram аккаунт</span>
+        <select class="select compact-select" [(ngModel)]="selectedInstagramId">
+          <option value="" disabled>Выберите аккаунт...</option>
+          <option *ngFor="let account of instagramAccounts" [value]="account.id">
+            {{ account.page_name }} (@{{ account.username }})
+          </option>
+        </select>
+      </label>
+    </div>
+
+    <div class="control-grid compare-grid" *ngIf="activeSource === 'instagram' && mode === 'compare'">
+      <label class="control-item">
+        <span class="control-label">Аккаунт A</span>
+        <select class="select compact-select accent-a" [(ngModel)]="instagramAId">
+          <option value="" disabled>Аккаунт A...</option>
+          <option *ngFor="let account of instagramAccounts" [value]="account.id">
+            {{ account.page_name }} (@{{ account.username }})
+          </option>
+        </select>
+      </label>
+
+      <label class="control-item">
+        <span class="control-label">Аккаунт B</span>
+        <select class="select compact-select accent-b" [(ngModel)]="instagramBId">
+          <option value="" disabled>Аккаунт B...</option>
+          <option *ngFor="let account of instagramAccounts" [value]="account.id">
+            {{ account.page_name }} (@{{ account.username }})
+          </option>
         </select>
       </label>
     </div>
@@ -232,7 +261,7 @@
           <div class="compare-metric-label">{{ row.label }}</div>
           <div class="compare-metric-values">
             <div class="compare-metric-main">{{ formatMetricValue(row.a, row.format, true) }}</div>
-          <div class="compare-metric-vs">против {{ formatMetricValue(row.b, row.format, true) }}</div>
+            <div class="compare-metric-vs">против {{ formatMetricValue(row.b, row.format, true) }}</div>
           </div>
           <div
             class="delta-pill"
@@ -393,7 +422,7 @@
           <div class="compare-metric-label">{{ row.label }}</div>
           <div class="compare-metric-values">
             <div class="compare-metric-main">{{ formatMetricValue(row.a, row.format, true) }}</div>
-          <div class="compare-metric-vs">против {{ formatMetricValue(row.b, row.format, true) }}</div>
+            <div class="compare-metric-vs">против {{ formatMetricValue(row.b, row.format, true) }}</div>
           </div>
           <div
             class="delta-pill"
@@ -447,6 +476,273 @@
           <div>
             <div class="panel-title">Подробное сравнение</div>
             <p class="muted panel-copy">Сравните общий трафик, размер аудитории и глубину визита в одной таблице.</p>
+          </div>
+        </div>
+
+        <div class="detail-table">
+          <div class="detail-head">
+            <div>Метрика</div>
+            <div>{{ getComparePrimaryLabel() }}</div>
+            <div>{{ getCompareSecondaryLabel() }}</div>
+            <div>Разница</div>
+          </div>
+
+          <div class="detail-row" *ngFor="let row of rows; trackBy: trackByMetric">
+            <div class="detail-metric">{{ row.label }}</div>
+
+            <div class="detail-side">
+              <div class="detail-value">{{ formatMetricValue(row.a, row.format) }}</div>
+              <div class="bar-track"><span class="bar-fill fill-a" [style.width.%]="barWidth(row.a, row.b)"></span></div>
+            </div>
+
+            <div class="detail-side">
+              <div class="detail-value">{{ formatMetricValue(row.b, row.format) }}</div>
+              <div class="bar-track"><span class="bar-fill fill-b" [style.width.%]="barWidth(row.b, row.a)"></span></div>
+            </div>
+
+            <div class="detail-delta">
+              <span
+                class="delta-pill"
+                [class.positive]="row.tone === 'positive'"
+                [class.negative]="row.tone === 'negative'"
+                [class.neutral]="row.tone === 'neutral'"
+              >
+                {{ formatDelta(row) }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </ng-container>
+  </div>
+
+  <div class="main-content" *ngIf="activeSource === 'instagram' && mode === 'single' && selectedInstagramAccount as account">
+    <section class="context-banner card">
+      <div>
+        <span class="eyebrow">Итоги Instagram</span>
+        <h2>{{ getSingleHeadline() }}</h2>
+        <p class="muted">Snapshot по аккаунту: аудитория, охват и основные реакции без привязки к отдельным постам.</p>
+      </div>
+      <div class="context-chip">{{ account.metric_date || 'Текущий snapshot' }}</div>
+    </section>
+
+    <section class="stats-grid instagram-stats-grid">
+      <div class="stat card accent-emerald">
+        <div class="label">Подписчики</div>
+        <div class="value">{{ fmtCompact(account.followers) }}</div>
+        <div class="hint muted">текущая аудитория</div>
+      </div>
+
+      <div class="stat card accent-cyan">
+        <div class="label">Посты</div>
+        <div class="value">{{ fmtCompact(account.posts) }}</div>
+        <div class="hint muted">опубликовано</div>
+      </div>
+
+      <div class="stat card accent-blue">
+        <div class="label">Просмотры</div>
+        <div class="value">{{ fmtCompact(account.views_total) }}</div>
+        <div class="hint muted">суммарно</div>
+      </div>
+
+      <div class="stat card accent-rose">
+        <div class="label">Лайки</div>
+        <div class="value">{{ fmtCompact(account.likes_total) }}</div>
+        <div class="hint muted">суммарно</div>
+      </div>
+
+      <div class="stat card accent-amber">
+        <div class="label">Комментарии</div>
+        <div class="value">{{ fmtCompact(account.comments_total) }}</div>
+        <div class="hint muted">суммарно</div>
+      </div>
+
+      <div class="stat card accent-violet">
+        <div class="label">Сохранения</div>
+        <div class="value">{{ fmtCompact(account.saved_total) }}</div>
+        <div class="hint muted">суммарно</div>
+      </div>
+
+      <div class="stat card accent-blue">
+        <div class="label">Просмотры / пост</div>
+        <div class="value">{{ formatMetricValue(account.posts ? account.views_total / account.posts : 0, 'decimal') }}</div>
+        <div class="hint muted">среднее на публикацию</div>
+      </div>
+
+      <div class="stat card accent-rose">
+        <div class="label">Реакции / пост</div>
+        <div class="value">{{ formatMetricValue(account.posts ? (account.likes_total + account.comments_total + account.saved_total) / account.posts : 0, 'decimal') }}</div>
+        <div class="hint muted">лайки + комментарии + сохранения</div>
+      </div>
+    </section>
+
+    <section class="grid-2">
+      <section class="card panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Профиль аккаунта</div>
+            <p class="muted panel-copy">Быстрые справочные данные по выбранной Instagram-странице.</p>
+          </div>
+        </div>
+
+        <div class="table single-detail-table">
+          <div class="row headrow">
+            <div>Поле</div>
+            <div>Значение</div>
+          </div>
+          <div class="row">
+            <div>Название страницы</div>
+            <div>{{ account.page_name }}</div>
+          </div>
+          <div class="row">
+            <div>Username</div>
+            <div>
+              <a class="profile-link" [href]="instagramUrl(account.username)" target="_blank" rel="noreferrer">
+                @{{ account.username }}
+              </a>
+            </div>
+          </div>
+          <div class="row">
+            <div>Instagram ID</div>
+            <div>{{ account.id || '—' }}</div>
+          </div>
+          <div class="row">
+            <div>Дата метрики</div>
+            <div>{{ account.metric_date || '—' }}</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Активность за день</div>
+            <p class="muted panel-copy">Endpoint отдаёт snapshot с дневными изменениями и накопительными totals.</p>
+          </div>
+        </div>
+
+        <div class="table instagram-activity-table">
+          <div class="row headrow">
+            <div>Метрика</div>
+            <div>За день</div>
+            <div>Итого</div>
+          </div>
+          <div class="row">
+            <div>Просмотры</div>
+            <div>{{ fmt(account.views_day) }}</div>
+            <div>{{ fmt(account.views_total) }}</div>
+          </div>
+          <div class="row">
+            <div>Лайки</div>
+            <div>{{ fmt(account.likes_day) }}</div>
+            <div>{{ fmt(account.likes_total) }}</div>
+          </div>
+          <div class="row">
+            <div>Комментарии</div>
+            <div>{{ fmt(account.comments_day) }}</div>
+            <div>{{ fmt(account.comments_total) }}</div>
+          </div>
+          <div class="row">
+            <div>Сохранения</div>
+            <div>{{ fmt(account.saved_day) }}</div>
+            <div>{{ fmt(account.saved_total) }}</div>
+          </div>
+        </div>
+      </section>
+    </section>
+    <section class="grid-2">
+      <section class="card panel chart-panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Структура реакций</div>
+            <p class="muted panel-copy">Круговая диаграмма показывает, что именно формирует общий engagement аккаунта.</p>
+          </div>
+          <div class="panel-tag">Круг</div>
+        </div>
+        <app-instagram-engagement-pie-chart [account]="account"></app-instagram-engagement-pie-chart>
+      </section>
+    </section>
+  </div>
+
+  <div class="main-content" *ngIf="activeSource === 'instagram' && mode === 'compare'">
+    <ng-container *ngIf="instagramCompareRows as rows">
+      <section class="compare-hero card">
+        <div>
+          <span class="eyebrow">Сравнение Instagram</span>
+          <h2>{{ getComparePrimaryLabel() }} против {{ getCompareSecondaryLabel() }}</h2>
+          <p class="muted">{{ getCompareSummary(rows, getComparePrimaryLabel(), getCompareSecondaryLabel()) }}</p>
+        </div>
+
+        <div class="duel-chips">
+          <div class="project-chip chip-a">{{ getComparePrimaryLabel() }}</div>
+          <div class="project-chip chip-b">{{ getCompareSecondaryLabel() }}</div>
+        </div>
+      </section>
+
+      <section class="compare-metrics-grid instagram-compare-grid">
+        <article
+          class="compare-metric card"
+          *ngFor="let row of rows; trackBy: trackByMetric"
+          [class.positive]="row.tone === 'positive'"
+          [class.negative]="row.tone === 'negative'"
+        >
+          <div class="compare-metric-label">{{ row.label }}</div>
+          <div class="compare-metric-values">
+            <div class="compare-metric-main">{{ formatMetricValue(row.a, row.format, true) }}</div>
+            <div class="compare-metric-vs">против {{ formatMetricValue(row.b, row.format, true) }}</div>
+          </div>
+          <div
+            class="delta-pill"
+            [class.positive]="row.tone === 'positive'"
+            [class.negative]="row.tone === 'negative'"
+            [class.neutral]="row.tone === 'neutral'"
+          >
+            {{ formatDelta(row) }}
+          </div>
+        </article>
+      </section>
+
+      <section class="grid-2">
+        <section class="card panel chart-panel">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title">Сравнение ключевых totals</div>
+              <p class="muted panel-copy">Группированные столбцы показывают, какой аккаунт сильнее по основным накопительным Instagram-метрикам.</p>
+            </div>
+            <div class="panel-tag">Столбцы</div>
+          </div>
+          <app-instagram-compare-bar-chart
+            [accountA]="instagramAccountA"
+            [accountB]="instagramAccountB"
+            [nameA]="getComparePrimaryLabel()"
+            [nameB]="getCompareSecondaryLabel()"
+          ></app-instagram-compare-bar-chart>
+        </section>
+
+        <section class="card panel chart-panel">
+          <div class="panel-head">
+            <div>
+              <div class="panel-title">Среднее на пост: A против B</div>
+              <p class="muted panel-copy">Линии помогают увидеть, какой аккаунт получает больше просмотров и реакций на одну публикацию.</p>
+            </div>
+            <div class="panel-tag">Линия</div>
+          </div>
+          <app-comparison-line-chart
+            [labels]="instagramPerPostLabels"
+            [seriesA]="instagramPerPostSeriesA"
+            [seriesB]="instagramPerPostSeriesB"
+            [nameA]="getComparePrimaryLabel()"
+            [nameB]="getCompareSecondaryLabel()"
+            format="decimal"
+          ></app-comparison-line-chart>
+        </section>
+      </section>
+
+      <section class="card compare-detail">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Подробное сравнение</div>
+            <p class="muted panel-copy">У Instagram endpoint сейчас snapshot-формат, поэтому здесь сравнение totals и дневных метрик без графиков временного ряда.</p>
           </div>
         </div>
 

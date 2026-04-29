@@ -57,6 +57,10 @@
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
+.dashboard-page__stats--instagram {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
 .dashboard-page__stat {
   padding: 14px;
 }
@@ -118,6 +122,10 @@
   grid-template-columns: 1.6fr 0.8fr 1fr 0.8fr 0.8fr 0.8fr;
 }
 
+.dashboard-page__row--instagram {
+  grid-template-columns: 1.7fr 0.8fr 0.7fr 0.9fr 0.8fr 0.8fr 0.8fr;
+}
+
 .dashboard-page__row--head {
   border-top: none;
   color: var(--muted);
@@ -144,11 +152,16 @@
   .dashboard-page__stats--channels {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .dashboard-page__stats--instagram {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 560px) {
   .dashboard-page__stats,
-  .dashboard-page__stats--channels {
+  .dashboard-page__stats--channels,
+  .dashboard-page__stats--instagram {
     grid-template-columns: 1fr;
   }
 
@@ -158,5 +171,9 @@
 
   .dashboard-page__row--channels {
     grid-template-columns: 1.3fr 0.8fr 0.8fr 0.8fr 0.8fr 0.8fr;
+  }
+
+  .dashboard-page__row--instagram {
+    grid-template-columns: 1.3fr 0.8fr 0.8fr 0.8fr 0.8fr 0.8fr 0.8fr;
   }
 }

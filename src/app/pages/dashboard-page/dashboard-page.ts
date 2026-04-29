@@ -6,6 +6,7 @@ import {
   Project,
   EpisodeInfo,
   YoutubeChannel,
+  InstagramAccount,
 } from '../../shared/services/ssm-api.service';
 
 @Component({
@@ -37,11 +38,23 @@ export class DashboardPageComponent implements OnInit {
   totalChannelLikes = 0;
   totalChannelComments = 0;
 
+  loadingInstagram = false;
+  instagramError: string | null = null;
+  instagramAccounts: InstagramAccount[] = [];
+  topInstagramAccounts: InstagramAccount[] = [];
+  totalInstagramFollowers = 0;
+  totalInstagramPosts = 0;
+  totalInstagramViews = 0;
+  totalInstagramLikes = 0;
+  totalInstagramComments = 0;
+  totalInstagramSaves = 0;
+
   constructor(private api: SsmApiService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit(): void {
     this.loadProjects();
     this.loadYoutubeChannels();
+    this.loadInstagramAccounts();
   }
 
   loadProjects() {
@@ -115,6 +128,10 @@ export class DashboardPageComponent implements OnInit {
     return link ? `https://www.youtube.com/channel/${link}` : '#';
   }
 
+  instagramUrl(username: string) {
+    return username ? `https://www.instagram.com/${username}/` : '#';
+  }
+
   toNum(v: any): number {
     return Number(v) || 0;
   }
@@ -140,6 +157,34 @@ export class DashboardPageComponent implements OnInit {
       error: (e: any) => {
         this.channelsError = e?.message ?? 'Не удалось загрузить данные по каналам';
         this.loadingChannels = false;
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  private loadInstagramAccounts() {
+    this.loadingInstagram = true;
+    this.instagramError = null;
+    this.cdr.detectChanges();
+
+    this.api.getInstagramAccounts().subscribe({
+      next: (items) => {
+        this.instagramAccounts = items ?? [];
+        this.totalInstagramFollowers = this.instagramAccounts.reduce((sum, account) => sum + account.followers, 0);
+        this.totalInstagramPosts = this.instagramAccounts.reduce((sum, account) => sum + account.posts, 0);
+        this.totalInstagramViews = this.instagramAccounts.reduce((sum, account) => sum + account.views_total, 0);
+        this.totalInstagramLikes = this.instagramAccounts.reduce((sum, account) => sum + account.likes_total, 0);
+        this.totalInstagramComments = this.instagramAccounts.reduce((sum, account) => sum + account.comments_total, 0);
+        this.totalInstagramSaves = this.instagramAccounts.reduce((sum, account) => sum + account.saved_total, 0);
+        this.topInstagramAccounts = [...this.instagramAccounts]
+          .sort((a, b) => b.followers - a.followers)
+          .slice(0, 8);
+        this.loadingInstagram = false;
+        this.cdr.detectChanges();
+      },
+      error: (e: any) => {
+        this.instagramError = e?.message ?? 'Не удалось загрузить данные по Instagram';
+        this.loadingInstagram = false;
         this.cdr.detectChanges();
       },
     });

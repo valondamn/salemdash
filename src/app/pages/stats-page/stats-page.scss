@@ -294,12 +294,20 @@ h2 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.instagram-stats-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
 .compare-metrics-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .yandex-compare-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.instagram-compare-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .stat,
@@ -473,6 +481,14 @@ h2 {
   grid-template-columns: 1.6fr 0.7fr 0.7fr 0.7fr;
 }
 
+.single-detail-table .row {
+  grid-template-columns: 1fr 1.1fr;
+}
+
+.instagram-activity-table .row {
+  grid-template-columns: 1fr 0.8fr 0.8fr;
+}
+
 .row {
   display: grid;
   gap: 10px;
@@ -517,6 +533,15 @@ h2 {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.profile-link {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.profile-link:hover {
+  text-decoration: underline;
 }
 
 .compare-detail {

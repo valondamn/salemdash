@@ -170,6 +170,41 @@ export type YoutubeChannel = {
   quarter_views_count: number;
 };
 
+export type InstagramAccountApiItem = {
+  Instagram_Comments_Day?: number | string;
+  Instagram_Comments_Total?: number | string;
+  Instagram_Followers?: number | string;
+  Instagram_ID?: string | number;
+  Instagram_Likes_Day?: number | string;
+  Instagram_Likes_Total?: number | string;
+  Instagram_Posts?: number | string;
+  Instagram_Saved_Day?: number | string;
+  Instagram_Saved_Total?: number | string;
+  Instagram_Username?: string;
+  Instagram_Views_Day?: number | string;
+  Instagram_Views_Total?: number | string;
+  Metric_Date?: string;
+  Page_Name?: string;
+  [key: string]: any;
+};
+
+export type InstagramAccount = {
+  id: string;
+  username: string;
+  page_name: string;
+  metric_date: string;
+  followers: number;
+  posts: number;
+  likes_day: number;
+  likes_total: number;
+  comments_day: number;
+  comments_total: number;
+  saved_day: number;
+  saved_total: number;
+  views_day: number;
+  views_total: number;
+};
+
 @Injectable({ providedIn: 'root' })
 export class SsmApiService {
   private base = environment.apiBaseUrl;
@@ -195,6 +230,12 @@ export class SsmApiService {
     return this.http
       .get<YoutubeChannelApiItem[]>(`${this.base}/ssm/channels/youtube`)
       .pipe(map((items) => (items ?? []).map((item) => this.normalizeYoutubeChannel(item))));
+  }
+
+  getInstagramAccounts() {
+    return this.http
+      .get<InstagramAccountApiItem[]>(`${this.base}/ssm/salem_dune/instagram`)
+      .pipe(map((items) => (items ?? []).map((item) => this.normalizeInstagramAccount(item))));
   }
 
   createRelease(payload: CreateReleasePayload) {
@@ -270,6 +311,25 @@ export class SsmApiService {
       quarter_likes_count: this.pickNumber(item.quarter_likes_count) ?? 0,
       quarter_comments_count: this.pickNumber(item.quarter_comments_count) ?? 0,
       quarter_views_count: this.pickNumber(item.quarter_views_count) ?? 0,
+    };
+  }
+
+  private normalizeInstagramAccount(item: InstagramAccountApiItem): InstagramAccount {
+    return {
+      id: this.pickString(item.Instagram_ID) ?? '',
+      username: this.pickString(item.Instagram_Username) ?? 'unknown',
+      page_name: this.pickString(item.Page_Name) ?? 'Instagram page',
+      metric_date: this.pickString(item.Metric_Date) ?? '',
+      followers: this.pickNumber(item.Instagram_Followers) ?? 0,
+      posts: this.pickNumber(item.Instagram_Posts) ?? 0,
+      likes_day: this.pickNumber(item.Instagram_Likes_Day) ?? 0,
+      likes_total: this.pickNumber(item.Instagram_Likes_Total) ?? 0,
+      comments_day: this.pickNumber(item.Instagram_Comments_Day) ?? 0,
+      comments_total: this.pickNumber(item.Instagram_Comments_Total) ?? 0,
+      saved_day: this.pickNumber(item.Instagram_Saved_Day) ?? 0,
+      saved_total: this.pickNumber(item.Instagram_Saved_Total) ?? 0,
+      views_day: this.pickNumber(item.Instagram_Views_Day) ?? 0,
+      views_total: this.pickNumber(item.Instagram_Views_Total) ?? 0,
     };
   }
 

@@ -140,4 +140,78 @@
       </div>
     </div>
   </section>
+
+  <div class="dashboard-page__notice" *ngIf="instagramError">{{ instagramError }}</div>
+
+  <section class="dashboard-page__panel card">
+    <div class="dashboard-page__panel-head">
+      <div class="dashboard-page__panel-title">Общие данные по Instagram</div>
+      <div class="dashboard-page__muted" *ngIf="loadingInstagram">Загружаем итоги...</div>
+    </div>
+
+    <section class="dashboard-page__stats dashboard-page__stats--instagram">
+      <div class="dashboard-page__stat card">
+        <div class="dashboard-page__label">Аккаунты</div>
+        <div class="dashboard-page__value">{{ fmt(instagramAccounts.length) }}</div>
+        <div class="dashboard-page__hint">доступно в API</div>
+      </div>
+
+      <div class="dashboard-page__stat card">
+        <div class="dashboard-page__label">Подписчики</div>
+        <div class="dashboard-page__value">{{ fmt(totalInstagramFollowers) }}</div>
+        <div class="dashboard-page__hint">по всем аккаунтам</div>
+      </div>
+
+      <div class="dashboard-page__stat card">
+        <div class="dashboard-page__label">Посты</div>
+        <div class="dashboard-page__value">{{ fmt(totalInstagramPosts) }}</div>
+        <div class="dashboard-page__hint">всего опубликовано</div>
+      </div>
+
+      <div class="dashboard-page__stat card">
+        <div class="dashboard-page__label">Просмотры</div>
+        <div class="dashboard-page__value">{{ fmt(totalInstagramViews) }}</div>
+        <div class="dashboard-page__hint">суммарно</div>
+      </div>
+
+      <div class="dashboard-page__stat card">
+        <div class="dashboard-page__label">Лайки</div>
+        <div class="dashboard-page__value">{{ fmt(totalInstagramLikes) }}</div>
+        <div class="dashboard-page__hint">суммарно</div>
+      </div>
+
+      <div class="dashboard-page__stat card">
+        <div class="dashboard-page__label">Сохранения</div>
+        <div class="dashboard-page__value">{{ fmt(totalInstagramSaves) }}</div>
+        <div class="dashboard-page__hint">суммарно</div>
+      </div>
+    </section>
+
+    <div class="dashboard-page__table dashboard-page__table--instagram">
+      <div class="dashboard-page__row dashboard-page__row--head dashboard-page__row--instagram">
+        <div>Аккаунт</div>
+        <div>Подписчики</div>
+        <div>Посты</div>
+        <div>Просмотры</div>
+        <div>Лайки</div>
+        <div>Комментарии</div>
+        <div>Дата</div>
+      </div>
+
+      <div class="dashboard-page__row dashboard-page__row--instagram" *ngFor="let account of topInstagramAccounts">
+        <div class="dashboard-page__episode">
+          <a class="dashboard-page__channel-link" [href]="instagramUrl(account.username)" target="_blank" rel="noreferrer">
+            {{ account.page_name }}
+          </a>
+          <span class="dashboard-page__muted"> @{{ account.username }}</span>
+        </div>
+        <div>{{ fmt(account.followers) }}</div>
+        <div>{{ fmt(account.posts) }}</div>
+        <div>{{ fmt(account.views_total) }}</div>
+        <div>{{ fmt(account.likes_total) }}</div>
+        <div>{{ fmt(account.comments_total) }}</div>
+        <div>{{ account.metric_date || '—' }}</div>
+      </div>
+    </div>
+  </section>
 </div>

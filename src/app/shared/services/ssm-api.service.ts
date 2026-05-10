@@ -5,11 +5,9 @@ import { environment } from '../../../environments/environment';
 
 
 export type AutoReleaseAddPayload = {
-  release_date: string;   // "YYYY-MM-DD"
+  youtube_id: string;
   project_id: number;
   season: number;
-  episodes_name: string;
-  youtube_id: string;
 };
 
 export type CreateReleasePayload = {
@@ -244,9 +242,9 @@ export class SsmApiService {
 
   addAutoRelease(payload: AutoReleaseAddPayload) {
     return this.http.post(
-      `${this.base}/ssm/auto_release_add/insert`,
+      `${this.base}/ssm/auto_release_add/update`,
       payload,
-      { responseType: 'text' } // <-- ключевой фикс
+      { responseType: 'text' }
     );
   }
 

@@ -3,8 +3,8 @@
     <div>
       <h1 class="release-page__title">Добавление релиза</h1>
       <p class="release-page__subtitle">
-        Выберите проект, задайте сезон и найдите нужное видео. Название, YouTube ID и дата релиза подтянутся
-        автоматически из API.
+        Выберите проект, задайте сезон и найдите нужное видео из общего списка. Для обновления релиза будут
+        использованы `youtube_id`, `project_id` и `season`.
       </p>
     </div>
   </header>
@@ -48,12 +48,12 @@
     </div>
 
     <div class="release-form__status">
-      <span class="release-form__status-item" *ngIf="loadingVideos">Загружаем видео выбранного проекта...</span>
+      <span class="release-form__status-item" *ngIf="loadingVideos">Загружаем общий список видео...</span>
       <span class="release-form__status-item" *ngIf="!loadingVideos && videos.length">
         Показано {{ filteredVideos.length }} из {{ videos.length }} видео
       </span>
-      <span class="release-form__status-item" *ngIf="!loadingVideos && !videos.length && form.value.project_id">
-        Для этого проекта видео не найдены
+      <span class="release-form__status-item" *ngIf="!loadingVideos && !videos.length">
+        Видео не найдены
       </span>
       <span class="release-form__selected" *ngIf="selectedVideo as video">
         Выбрано: <b>{{ getVideoName(video) }}</b>
@@ -66,7 +66,8 @@
         <div>
           <div class="release-form__picker-title">Список видео</div>
           <p class="release-form__picker-copy">
-            В карточке уже лежат название, канал, YouTube ID и дата релиза. Просто нажмите на нужное видео.
+            Здесь показываются все видео без привязки к конкретному проекту. Выберите нужное и привяжите его к
+            проекту и сезону.
           </p>
         </div>
       </div>

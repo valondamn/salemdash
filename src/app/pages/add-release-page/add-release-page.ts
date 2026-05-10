@@ -51,10 +51,10 @@ export class AddReleasePageComponent implements OnInit {
       .pipe(distinctUntilChanged())
       .subscribe(() => {
         this.success = null;
-        this.loadVideosForSelectedProject();
       });
 
     this.loadProjects();
+    this.loadAllVideos();
   }
 
   get filteredVideos(): EpisodeInfo[] {
@@ -140,23 +140,20 @@ export class AddReleasePageComponent implements OnInit {
 
     const formValue = this.form.getRawValue();
     const selectedVideo = this.selectedVideo;
-    const releaseDate = this.getVideoDate(selectedVideo);
     const youtubeId = this.getVideoId(selectedVideo);
     const episodeName = this.getVideoName(selectedVideo);
 
-    if (!releaseDate || !youtubeId || !episodeName) {
-      const msg = 'У выбранного видео не хватает данных из API';
+    if (!youtubeId) {
+      const msg = 'У выбранного видео не хватает YouTube ID';
       this.error = msg;
       this.toastr.error(msg, 'Ошибка');
       return;
     }
 
     const payload: AutoReleaseAddPayload = {
-      release_date: releaseDate,
+      youtube_id: youtubeId,
       project_id: Number(formValue.project_id),
       season: Number(formValue.season),
-      episodes_name: episodeName,
-      youtube_id: youtubeId,
     };
 
     this.submitting = true;
@@ -222,30 +219,24 @@ export class AddReleasePageComponent implements OnInit {
     return date || '—';
   }
 
-  private loadVideosForSelectedProject() {
-    const projectId = Number(this.form.value.project_id);
-
+  private loadAllVideos() {
     this.videos = [];
     this.form.patchValue({
       video_query: '',
       selected_video_id: '',
     });
 
-    if (!projectId) {
-      return;
-    }
-
     this.loadingVideos = true;
     this.error = null;
     this.cdr.detectChanges();
 
-    this.api.getProjectInfo(projectId).subscribe({
+    this.api.getProjectInfo(0).subscribe({
       next: (rows) => {
         this.videos = [...(rows ?? [])].sort((a, b) => this.getVideoDate(b).localeCompare(this.getVideoDate(a)));
         this.cdr.detectChanges();
       },
       error: (e: any) => {
-        this.error = e?.message ?? 'Не удалось загрузить видео';
+        this.error = e?.message ?? 'Не удалось загрузить общий список видео';
         this.cdr.detectChanges();
       },
       complete: () => {

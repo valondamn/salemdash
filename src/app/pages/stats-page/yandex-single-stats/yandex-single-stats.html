@@ -1,0 +1,39 @@
+<div class="main-content">
+  <section class="context-banner card">
+    <div>
+      <span class="eyebrow">Итоги Яндекс Метрики</span>
+      <h2>{{ headline }}</h2>
+    </div>
+    <div class="context-chip">Трафик серий</div>
+  </section>
+
+  <section class="stats-grid yandex-stats-grid">
+    <div class="stat card accent-emerald">
+      <div class="label">Пользователи</div>
+      <div class="value">{{ fmtCompact(users) }}</div>
+      <div class="hint muted">уникальные</div>
+    </div>
+
+    <div class="stat card accent-cyan">
+      <div class="label">Визиты</div>
+      <div class="value">{{ fmtCompact(visits) }}</div>
+      <div class="hint muted">всего</div>
+    </div>
+
+    <div class="stat card accent-amber">
+      <div class="label">Визитов на пользователя</div>
+      <div class="value">{{ formatDecimal(visitsPerUser) }}</div>
+      <div class="hint muted">глубина визита</div>
+    </div>
+  </section>
+
+  <section class="card panel chart-panel">
+    <div class="panel-head">
+      <div>
+        <div class="panel-title">Визиты по сериям</div>
+      </div>
+      <div class="panel-tag">{{ slugLabel }}</div>
+    </div>
+    <app-yandex-visits-chart [rows]="rows" [slug]="slug"></app-yandex-visits-chart>
+  </section>
+</div>

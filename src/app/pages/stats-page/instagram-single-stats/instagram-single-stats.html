@@ -1,0 +1,144 @@
+<div class="main-content">
+  <section class="context-banner card">
+    <div>
+      <span class="eyebrow">Итоги Instagram</span>
+      <h2>{{ headline }}</h2>
+    </div>
+    <div class="context-chip">{{ account.metric_date || 'Текущий snapshot' }}</div>
+  </section>
+
+  <section class="stats-grid instagram-stats-grid">
+    <div class="stat card accent-emerald">
+      <div class="label">Подписчики</div>
+      <div class="value">{{ fmtCompact(account.followers) }}</div>
+      <div class="hint muted">текущая аудитория</div>
+    </div>
+
+    <div class="stat card accent-cyan">
+      <div class="label">Посты</div>
+      <div class="value">{{ fmtCompact(account.posts) }}</div>
+      <div class="hint muted">опубликовано</div>
+    </div>
+
+    <div class="stat card accent-blue">
+      <div class="label">Просмотры</div>
+      <div class="value">{{ fmtCompact(account.views_total) }}</div>
+      <div class="hint muted">суммарно</div>
+    </div>
+
+    <div class="stat card accent-rose">
+      <div class="label">Лайки</div>
+      <div class="value">{{ fmtCompact(account.likes_total) }}</div>
+      <div class="hint muted">суммарно</div>
+    </div>
+
+    <div class="stat card accent-amber">
+      <div class="label">Комментарии</div>
+      <div class="value">{{ fmtCompact(account.comments_total) }}</div>
+      <div class="hint muted">суммарно</div>
+    </div>
+
+    <div class="stat card accent-violet">
+      <div class="label">Сохранения</div>
+      <div class="value">{{ fmtCompact(account.saved_total) }}</div>
+      <div class="hint muted">суммарно</div>
+    </div>
+
+    <div class="stat card accent-blue">
+      <div class="label">Просмотры / пост</div>
+      <div class="value">{{ formatDecimal(account.posts ? account.views_total / account.posts : 0) }}</div>
+      <div class="hint muted">среднее на публикацию</div>
+    </div>
+
+    <div class="stat card accent-rose">
+      <div class="label">Реакции / пост</div>
+      <div class="value">{{ formatDecimal(account.posts ? (account.likes_total + account.comments_total + account.saved_total) / account.posts : 0) }}</div>
+      <div class="hint muted">лайки + комментарии + сохранения</div>
+    </div>
+  </section>
+
+  <section class="grid-2">
+    <section class="card panel">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">Профиль аккаунта</div>
+        </div>
+      </div>
+
+      <div class="table single-detail-table">
+        <div class="row headrow">
+          <div>Поле</div>
+          <div>Значение</div>
+        </div>
+        <div class="row">
+          <div>Название страницы</div>
+          <div>{{ account.page_name }}</div>
+        </div>
+        <div class="row">
+          <div>Username</div>
+          <div>
+            <a class="profile-link" [href]="instagramUrl(account.username)" target="_blank" rel="noreferrer">
+              @{{ account.username }}
+            </a>
+          </div>
+        </div>
+        <div class="row">
+          <div>Instagram ID</div>
+          <div>{{ account.id || '—' }}</div>
+        </div>
+        <div class="row">
+          <div>Дата метрики</div>
+          <div>{{ account.metric_date || '—' }}</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card panel">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">Активность за день</div>
+        </div>
+      </div>
+
+      <div class="table instagram-activity-table">
+        <div class="row headrow">
+          <div>Метрика</div>
+          <div>За день</div>
+          <div>Итого</div>
+        </div>
+        <div class="row">
+          <div>Просмотры</div>
+          <div>{{ fmt(account.views_day) }}</div>
+          <div>{{ fmt(account.views_total) }}</div>
+        </div>
+        <div class="row">
+          <div>Лайки</div>
+          <div>{{ fmt(account.likes_day) }}</div>
+          <div>{{ fmt(account.likes_total) }}</div>
+        </div>
+        <div class="row">
+          <div>Комментарии</div>
+          <div>{{ fmt(account.comments_day) }}</div>
+          <div>{{ fmt(account.comments_total) }}</div>
+        </div>
+        <div class="row">
+          <div>Сохранения</div>
+          <div>{{ fmt(account.saved_day) }}</div>
+          <div>{{ fmt(account.saved_total) }}</div>
+        </div>
+      </div>
+    </section>
+  </section>
+
+  <section class="grid-2">
+    <section class="card panel chart-panel">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">Структура реакций</div>
+        </div>
+        <div class="panel-tag">Круг</div>
+      </div>
+      <app-instagram-engagement-pie-chart [account]="account"></app-instagram-engagement-pie-chart>
+    </section>
+  </section>
+</div>

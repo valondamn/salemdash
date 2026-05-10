@@ -1,34 +1,49 @@
 <div class="dashboard-page">
-  <header class="dashboard-page__head">
-    <div class="dashboard-page__controls">
-      <div class="dashboard-page__title-wrap">
-        <h1 class="dashboard-page__title">Дашборд</h1>
-      </div>
+  <header class="dashboard-page__head card">
+    <div class="dashboard-page__title-wrap">
+      <h1 class="dashboard-page__title">Дашборд</h1>
+      <p class="dashboard-page__subtitle">
+        Быстрый срез по проекту, YouTube и Instagram.
+      </p>
+    </div>
 
+    <div class="dashboard-page__controls">
       <select
         class="dashboard-page__select"
         [(ngModel)]="selectedProjectId"
         (change)="onProjectChange()"
-        [disabled]="loadingProjects"
+        [disabled]="loadingProjects()"
       >
         <option value="" disabled>Выберите проект...</option>
-        <option *ngFor="let p of projects" [value]="p.id">
+        <option *ngFor="let p of projects()" [value]="p.id">
           {{ p.name || p.utm_name || ('Проект ' + p.id) }}
         </option>
       </select>
 
-      <button class="btn dashboard-page__refresh" (click)="loadProjectInfo()" [disabled]="loadingInfo || !selectedProjectId">
-        {{ loadingInfo ? 'Обновляем...' : 'Обновить' }}
+      <button class="btn dashboard-page__refresh" (click)="refreshProjectInfo()" [disabled]="loadingInfo() || !selectedProjectId">
+        {{ loadingInfo() ? 'Обновляем...' : 'Обновить' }}
       </button>
     </div>
   </header>
 
-  <div class="dashboard-page__notice" *ngIf="error">{{ error }}</div>
+  <div class="dashboard-page__notice" *ngIf="error()">{{ error() }}</div>
+
+  <section class="dashboard-page__status card" *ngIf="loadingProjects() || loadingInfo()">
+    <div class="dashboard-page__status-dot"></div>
+    <div>
+      <div class="dashboard-page__status-title">
+        {{ loadingProjects() ? 'Загружаем список проектов' : 'Обновляем данные проекта' }}
+      </div>
+      <p class="dashboard-page__status-copy">
+        {{ loadingProjects() ? 'Подготовим список проектов.' : 'Обновляем эпизоды для проекта ' + selectedProjectLabel + '.' }}
+      </p>
+    </div>
+  </section>
 
   <section class="dashboard-page__stats">
     <div class="dashboard-page__stat card">
       <div class="dashboard-page__label">Эпизоды</div>
-      <div class="dashboard-page__value">{{ episodes.length }}</div>
+      <div class="dashboard-page__value">{{ episodes().length }}</div>
       <div class="dashboard-page__hint">элементов из API</div>
     </div>
 
@@ -53,11 +68,24 @@
 
   <section class="dashboard-page__panel card">
     <div class="dashboard-page__panel-head">
-      <div class="dashboard-page__panel-title">Эпизоды</div>
-      <div class="dashboard-page__muted" *ngIf="loadingInfo">Загружаем данные...</div>
+      <div>
+        <div class="dashboard-page__panel-title">Эпизоды</div>
+        <p class="dashboard-page__panel-copy">
+          <strong>{{ selectedProjectLabel }}</strong>
+        </p>
+      </div>
+      <div class="dashboard-page__muted" *ngIf="loadingInfo()">Загружаем данные...</div>
     </div>
 
-    <div class="dashboard-page__table">
+    <div class="dashboard-page__loading-table" *ngIf="loadingInfo() && !hasEpisodes">
+      <div class="dashboard-page__loading-row" *ngFor="let _ of [1, 2, 3, 4, 5]"></div>
+    </div>
+
+    <div class="dashboard-page__empty" *ngIf="!loadingInfo() && !hasEpisodes">
+      По выбранному проекту пока нет данных по эпизодам. Попробуйте другой проект или обновите данные позже.
+    </div>
+
+    <div class="dashboard-page__table" *ngIf="hasEpisodes">
       <div class="dashboard-page__row dashboard-page__row--head">
         <div>Эпизод</div>
         <div>Просмотры</div>
@@ -66,7 +94,7 @@
         <div>Релиз</div>
       </div>
 
-      <div class="dashboard-page__row" *ngFor="let e of episodes.slice(0, 15)">
+      <div class="dashboard-page__row" *ngFor="let e of episodes().slice(0, 15)">
         <div class="dashboard-page__episode">{{ e.episode_name || '—' }}</div>
         <div>{{ fmt(toNum(e.youtube_views) || 0) }}</div>
         <div>{{ fmt(toNum(e.youtube_likes) || 0) }}</div>
@@ -76,18 +104,21 @@
     </div>
   </section>
 
-  <div class="dashboard-page__notice" *ngIf="channelsError">{{ channelsError }}</div>
+  <div class="dashboard-page__notice" *ngIf="channelsError()">{{ channelsError() }}</div>
 
   <section class="dashboard-page__panel card">
     <div class="dashboard-page__panel-head">
-      <div class="dashboard-page__panel-title">Общие данные по каналам YouTube</div>
-      <div class="dashboard-page__muted" *ngIf="loadingChannels">Загружаем итоги...</div>
+      <div>
+        <div class="dashboard-page__panel-title">Общие данные по каналам YouTube</div>
+        <p class="dashboard-page__panel-copy">Общий snapshot по каналам.</p>
+      </div>
+      <div class="dashboard-page__muted" *ngIf="loadingChannels()">Загружаем итоги...</div>
     </div>
 
     <section class="dashboard-page__stats dashboard-page__stats--channels">
       <div class="dashboard-page__stat card">
         <div class="dashboard-page__label">Каналы</div>
-        <div class="dashboard-page__value">{{ fmt(channels.length) }}</div>
+        <div class="dashboard-page__value">{{ fmt(channels().length) }}</div>
         <div class="dashboard-page__hint">связаны с API</div>
       </div>
 
@@ -116,7 +147,15 @@
       </div>
     </section>
 
-    <div class="dashboard-page__table dashboard-page__table--channels">
+    <div class="dashboard-page__loading-table" *ngIf="loadingChannels() && !channels().length">
+      <div class="dashboard-page__loading-row" *ngFor="let _ of [1, 2, 3, 4]"></div>
+    </div>
+
+    <div class="dashboard-page__empty" *ngIf="!loadingChannels() && !channels().length">
+      Данные по YouTube-каналам пока не пришли из API.
+    </div>
+
+    <div class="dashboard-page__table dashboard-page__table--channels" *ngIf="channels().length">
       <div class="dashboard-page__row dashboard-page__row--head dashboard-page__row--channels">
         <div>Канал</div>
         <div>Подписчики</div>
@@ -126,7 +165,7 @@
         <div>Просмотры за квартал</div>
       </div>
 
-      <div class="dashboard-page__row dashboard-page__row--channels" *ngFor="let channel of topChannels">
+      <div class="dashboard-page__row dashboard-page__row--channels" *ngFor="let channel of topChannels()">
         <div class="dashboard-page__episode">
           <a class="dashboard-page__channel-link" [href]="channelUrl(channel.link)" target="_blank" rel="noreferrer">
             {{ channel.name }}
@@ -141,18 +180,21 @@
     </div>
   </section>
 
-  <div class="dashboard-page__notice" *ngIf="instagramError">{{ instagramError }}</div>
+  <div class="dashboard-page__notice" *ngIf="instagramError()">{{ instagramError() }}</div>
 
   <section class="dashboard-page__panel card">
     <div class="dashboard-page__panel-head">
-      <div class="dashboard-page__panel-title">Общие данные по Instagram</div>
-      <div class="dashboard-page__muted" *ngIf="loadingInstagram">Загружаем итоги...</div>
+      <div>
+        <div class="dashboard-page__panel-title">Общие данные по Instagram</div>
+        <p class="dashboard-page__panel-copy">Общий snapshot по аккаунтам.</p>
+      </div>
+      <div class="dashboard-page__muted" *ngIf="loadingInstagram()">Загружаем итоги...</div>
     </div>
 
     <section class="dashboard-page__stats dashboard-page__stats--instagram">
       <div class="dashboard-page__stat card">
         <div class="dashboard-page__label">Аккаунты</div>
-        <div class="dashboard-page__value">{{ fmt(instagramAccounts.length) }}</div>
+        <div class="dashboard-page__value">{{ fmt(instagramAccounts().length) }}</div>
         <div class="dashboard-page__hint">доступно в API</div>
       </div>
 
@@ -187,7 +229,15 @@
       </div>
     </section>
 
-    <div class="dashboard-page__table dashboard-page__table--instagram">
+    <div class="dashboard-page__loading-table" *ngIf="loadingInstagram() && !instagramAccounts().length">
+      <div class="dashboard-page__loading-row" *ngFor="let _ of [1, 2, 3, 4]"></div>
+    </div>
+
+    <div class="dashboard-page__empty" *ngIf="!loadingInstagram() && !instagramAccounts().length">
+      Данные по Instagram пока не пришли из API.
+    </div>
+
+    <div class="dashboard-page__table dashboard-page__table--instagram" *ngIf="instagramAccounts().length">
       <div class="dashboard-page__row dashboard-page__row--head dashboard-page__row--instagram">
         <div>Аккаунт</div>
         <div>Подписчики</div>
@@ -198,7 +248,7 @@
         <div>Дата</div>
       </div>
 
-      <div class="dashboard-page__row dashboard-page__row--instagram" *ngFor="let account of topInstagramAccounts">
+      <div class="dashboard-page__row dashboard-page__row--instagram" *ngFor="let account of topInstagramAccounts()">
         <div class="dashboard-page__episode">
           <a class="dashboard-page__channel-link" [href]="instagramUrl(account.username)" target="_blank" rel="noreferrer">
             {{ account.page_name }}

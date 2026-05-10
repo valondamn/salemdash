@@ -1,13 +1,14 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, signal } from '@angular/core';
 import { NgFor, NgIf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
-  SsmApiService,
   Project,
   EpisodeInfo,
   YoutubeChannel,
   InstagramAccount,
-} from '../../shared/services/ssm-api.service';
+} from '../../shared/services/ssm-models';
+import { ProjectsApiService } from '../../shared/services/projects-api.service';
+import { AnalyticsApiService } from '../../shared/services/analytics-api.service';
 
 @Component({
   selector: 'app-dashboard-page',
@@ -15,33 +16,34 @@ import {
   imports: [NgFor, NgIf, FormsModule],
   templateUrl: './dashboard-page.html',
   styleUrl: './dashboard-page.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DashboardPageComponent implements OnInit {
-  projects: Project[] = [];
+  projects = signal<Project[]>([]);
   selectedProjectId: string = '';
 
-  loadingProjects = false;
-  loadingInfo = false;
-  error: string | null = null;
+  loadingProjects = signal(false);
+  loadingInfo = signal(false);
+  error = signal<string | null>(null);
 
-  episodes: EpisodeInfo[] = [];
+  episodes = signal<EpisodeInfo[]>([]);
   totalViews = 0;
   totalLikes = 0;
   totalComments = 0;
 
-  loadingChannels = false;
-  channelsError: string | null = null;
-  channels: YoutubeChannel[] = [];
-  topChannels: YoutubeChannel[] = [];
+  loadingChannels = signal(false);
+  channelsError = signal<string | null>(null);
+  channels = signal<YoutubeChannel[]>([]);
+  topChannels = signal<YoutubeChannel[]>([]);
   totalChannelSubscribers = 0;
   totalChannelViews = 0;
   totalChannelLikes = 0;
   totalChannelComments = 0;
 
-  loadingInstagram = false;
-  instagramError: string | null = null;
-  instagramAccounts: InstagramAccount[] = [];
-  topInstagramAccounts: InstagramAccount[] = [];
+  loadingInstagram = signal(false);
+  instagramError = signal<string | null>(null);
+  instagramAccounts = signal<InstagramAccount[]>([]);
+  topInstagramAccounts = signal<InstagramAccount[]>([]);
   totalInstagramFollowers = 0;
   totalInstagramPosts = 0;
   totalInstagramViews = 0;
@@ -49,7 +51,10 @@ export class DashboardPageComponent implements OnInit {
   totalInstagramComments = 0;
   totalInstagramSaves = 0;
 
-  constructor(private api: SsmApiService, private cdr: ChangeDetectorRef) {}
+  constructor(
+    private projectsApi: ProjectsApiService,
+    private analyticsApi: AnalyticsApiService
+  ) {}
 
   ngOnInit(): void {
     this.loadProjects();
@@ -57,28 +62,36 @@ export class DashboardPageComponent implements OnInit {
     this.loadInstagramAccounts();
   }
 
-  loadProjects() {
-    this.loadingProjects = true;
-    this.error = null;
-    this.cdr.detectChanges();
+  get selectedProjectLabel() {
+    const projectId = Number(this.selectedProjectId);
+    const project = this.projects().find((item) => Number(item.id) === projectId);
+    return project?.name || project?.utm_name || 'проект не выбран';
+  }
 
-    this.api.getProjects().subscribe({
+  get hasEpisodes() {
+    return this.episodes().length > 0;
+  }
+
+  loadProjects(force = false) {
+    this.loadingProjects.set(true);
+    this.error.set(null);
+
+    this.projectsApi.getProjects(force).subscribe({
       next: (list) => {
-        this.projects = list ?? [];
+        this.projects.set(list ?? []);
 
-        if (this.projects.length && !this.selectedProjectId) {
-          this.selectedProjectId = String(this.projects[0].id);
+        const projects = this.projects();
+        if (projects.length && !this.selectedProjectId) {
+          this.selectedProjectId = String(projects[0].id);
         }
 
-        this.loadingProjects = false;
-        this.cdr.detectChanges();
+        this.loadingProjects.set(false);
 
-        this.loadProjectInfo();
+        this.loadProjectInfo(force);
       },
       error: (e: any) => {
-        this.error = e?.message ?? 'Не удалось загрузить проекты';
-        this.loadingProjects = false;
-        this.cdr.detectChanges();
+        this.error.set(e?.message ?? 'Не удалось загрузить проекты');
+        this.loadingProjects.set(false);
       },
     });
   }
@@ -87,35 +100,38 @@ export class DashboardPageComponent implements OnInit {
     this.loadProjectInfo();
   }
 
-  loadProjectInfo() {
+  refreshProjectInfo() {
+    this.loadProjectInfo(true);
+  }
+
+  loadProjectInfo(force = false) {
     let id = Number(this.selectedProjectId);
 
-    if (!id && this.projects.length) {
-      id = Number(this.projects[0].id);
+    const projects = this.projects();
+    if (!id && projects.length) {
+      id = Number(projects[0].id);
       this.selectedProjectId = String(id);
     }
 
     if (!id) return;
 
-    this.loadingInfo = true;
-    this.error = null;
-    this.cdr.detectChanges();
+    this.loadingInfo.set(true);
+    this.error.set(null);
 
-    this.api.getProjectInfo(id).subscribe({
+    this.projectsApi.getProjectInfo(id, force).subscribe({
       next: (rows) => {
-        this.episodes = rows ?? [];
+        this.episodes.set(rows ?? []);
+        const episodes = this.episodes();
 
-        this.totalViews = this.episodes.reduce((s, x) => s + (Number(x.youtube_views) || 0), 0);
-        this.totalLikes = this.episodes.reduce((s, x) => s + (Number(x.youtube_likes) || 0), 0);
-        this.totalComments = this.episodes.reduce((s, x) => s + (Number(x.youtube_comments) || 0), 0);
+        this.totalViews = episodes.reduce((s, x) => s + (Number(x.youtube_views) || 0), 0);
+        this.totalLikes = episodes.reduce((s, x) => s + (Number(x.youtube_likes) || 0), 0);
+        this.totalComments = episodes.reduce((s, x) => s + (Number(x.youtube_comments) || 0), 0);
 
-        this.loadingInfo = false;
-        this.cdr.detectChanges();
+        this.loadingInfo.set(false);
       },
       error: (e: any) => {
-        this.error = e?.message ?? 'Не удалось загрузить данные проекта';
-        this.loadingInfo = false;
-        this.cdr.detectChanges();
+        this.error.set(e?.message ?? 'Не удалось загрузить данные проекта');
+        this.loadingInfo.set(false);
       },
     });
   }
@@ -136,56 +152,52 @@ export class DashboardPageComponent implements OnInit {
     return Number(v) || 0;
   }
 
-  private loadYoutubeChannels() {
-    this.loadingChannels = true;
-    this.channelsError = null;
-    this.cdr.detectChanges();
+  private loadYoutubeChannels(force = false) {
+    this.loadingChannels.set(true);
+    this.channelsError.set(null);
 
-    this.api.getYoutubeChannels().subscribe({
+    this.analyticsApi.getYoutubeChannels(force).subscribe({
       next: (items) => {
-        this.channels = items ?? [];
-        this.totalChannelSubscribers = this.channels.reduce((sum, channel) => sum + channel.subs_count, 0);
-        this.totalChannelViews = this.channels.reduce((sum, channel) => sum + channel.views_count, 0);
-        this.totalChannelLikes = this.channels.reduce((sum, channel) => sum + channel.likes_count, 0);
-        this.totalChannelComments = this.channels.reduce((sum, channel) => sum + channel.comments_count, 0);
-        this.topChannels = [...this.channels]
+        this.channels.set(items ?? []);
+        const channels = this.channels();
+        this.totalChannelSubscribers = channels.reduce((sum, channel) => sum + channel.subs_count, 0);
+        this.totalChannelViews = channels.reduce((sum, channel) => sum + channel.views_count, 0);
+        this.totalChannelLikes = channels.reduce((sum, channel) => sum + channel.likes_count, 0);
+        this.totalChannelComments = channels.reduce((sum, channel) => sum + channel.comments_count, 0);
+        this.topChannels.set([...channels]
           .sort((a, b) => b.views_count - a.views_count)
-          .slice(0, 8);
-        this.loadingChannels = false;
-        this.cdr.detectChanges();
+          .slice(0, 8));
+        this.loadingChannels.set(false);
       },
       error: (e: any) => {
-        this.channelsError = e?.message ?? 'Не удалось загрузить данные по каналам';
-        this.loadingChannels = false;
-        this.cdr.detectChanges();
+        this.channelsError.set(e?.message ?? 'Не удалось загрузить данные по каналам');
+        this.loadingChannels.set(false);
       },
     });
   }
 
-  private loadInstagramAccounts() {
-    this.loadingInstagram = true;
-    this.instagramError = null;
-    this.cdr.detectChanges();
+  private loadInstagramAccounts(force = false) {
+    this.loadingInstagram.set(true);
+    this.instagramError.set(null);
 
-    this.api.getInstagramAccounts().subscribe({
+    this.analyticsApi.getInstagramAccounts(force).subscribe({
       next: (items) => {
-        this.instagramAccounts = items ?? [];
-        this.totalInstagramFollowers = this.instagramAccounts.reduce((sum, account) => sum + account.followers, 0);
-        this.totalInstagramPosts = this.instagramAccounts.reduce((sum, account) => sum + account.posts, 0);
-        this.totalInstagramViews = this.instagramAccounts.reduce((sum, account) => sum + account.views_total, 0);
-        this.totalInstagramLikes = this.instagramAccounts.reduce((sum, account) => sum + account.likes_total, 0);
-        this.totalInstagramComments = this.instagramAccounts.reduce((sum, account) => sum + account.comments_total, 0);
-        this.totalInstagramSaves = this.instagramAccounts.reduce((sum, account) => sum + account.saved_total, 0);
-        this.topInstagramAccounts = [...this.instagramAccounts]
+        this.instagramAccounts.set(items ?? []);
+        const instagramAccounts = this.instagramAccounts();
+        this.totalInstagramFollowers = instagramAccounts.reduce((sum, account) => sum + account.followers, 0);
+        this.totalInstagramPosts = instagramAccounts.reduce((sum, account) => sum + account.posts, 0);
+        this.totalInstagramViews = instagramAccounts.reduce((sum, account) => sum + account.views_total, 0);
+        this.totalInstagramLikes = instagramAccounts.reduce((sum, account) => sum + account.likes_total, 0);
+        this.totalInstagramComments = instagramAccounts.reduce((sum, account) => sum + account.comments_total, 0);
+        this.totalInstagramSaves = instagramAccounts.reduce((sum, account) => sum + account.saved_total, 0);
+        this.topInstagramAccounts.set([...instagramAccounts]
           .sort((a, b) => b.followers - a.followers)
-          .slice(0, 8);
-        this.loadingInstagram = false;
-        this.cdr.detectChanges();
+          .slice(0, 8));
+        this.loadingInstagram.set(false);
       },
       error: (e: any) => {
-        this.instagramError = e?.message ?? 'Не удалось загрузить данные по Instagram';
-        this.loadingInstagram = false;
-        this.cdr.detectChanges();
+        this.instagramError.set(e?.message ?? 'Не удалось загрузить данные по Instagram');
+        this.loadingInstagram.set(false);
       },
     });
   }

@@ -1,0 +1,113 @@
+<div class="main-content">
+  <section class="compare-hero card">
+    <div>
+      <span class="eyebrow">Сравнение Instagram</span>
+      <h2>{{ primaryLabel }} против {{ secondaryLabel }}</h2>
+      <p class="muted">{{ summary }}</p>
+    </div>
+
+    <div class="duel-chips">
+      <div class="project-chip chip-a">{{ primaryLabel }}</div>
+      <div class="project-chip chip-b">{{ secondaryLabel }}</div>
+    </div>
+  </section>
+
+  <section class="compare-metrics-grid instagram-compare-grid">
+    <article
+      class="compare-metric card"
+      *ngFor="let row of rows; trackBy: trackByMetric"
+      [class.positive]="row.tone === 'positive'"
+      [class.negative]="row.tone === 'negative'"
+    >
+      <div class="compare-metric-label">{{ row.label }}</div>
+      <div class="compare-metric-values">
+        <div class="compare-metric-main">{{ formatMetricValue(row.a, row.format, true) }}</div>
+        <div class="compare-metric-vs">против {{ formatMetricValue(row.b, row.format, true) }}</div>
+      </div>
+      <div
+        class="delta-pill"
+        [class.positive]="row.tone === 'positive'"
+        [class.negative]="row.tone === 'negative'"
+        [class.neutral]="row.tone === 'neutral'"
+      >
+        {{ formatDelta(row) }}
+      </div>
+    </article>
+  </section>
+
+  <section class="grid-2">
+    <section class="card panel chart-panel">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">Сравнение ключевых totals</div>
+        </div>
+        <div class="panel-tag">Столбцы</div>
+      </div>
+      <app-instagram-compare-bar-chart
+        [accountA]="accountA"
+        [accountB]="accountB"
+        [nameA]="primaryLabel"
+        [nameB]="secondaryLabel"
+      ></app-instagram-compare-bar-chart>
+    </section>
+
+    <section class="card panel chart-panel">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">Среднее на пост: A против B</div>
+        </div>
+        <div class="panel-tag">Линия</div>
+      </div>
+      <app-comparison-line-chart
+        [labels]="perPostLabels"
+        [seriesA]="perPostSeriesA"
+        [seriesB]="perPostSeriesB"
+        [nameA]="primaryLabel"
+        [nameB]="secondaryLabel"
+        format="decimal"
+      ></app-comparison-line-chart>
+    </section>
+  </section>
+
+  <section class="card compare-detail">
+    <div class="panel-head">
+      <div>
+        <div class="panel-title">Подробное сравнение</div>
+      </div>
+    </div>
+
+    <div class="detail-table">
+      <div class="detail-head">
+        <div>Метрика</div>
+        <div>{{ primaryLabel }}</div>
+        <div>{{ secondaryLabel }}</div>
+        <div>Разница</div>
+      </div>
+
+      <div class="detail-row" *ngFor="let row of rows; trackBy: trackByMetric">
+        <div class="detail-metric">{{ row.label }}</div>
+
+        <div class="detail-side">
+          <div class="detail-value">{{ formatMetricValue(row.a, row.format) }}</div>
+          <div class="bar-track"><span class="bar-fill fill-a" [style.width.%]="barWidth(row.a, row.b)"></span></div>
+        </div>
+
+        <div class="detail-side">
+          <div class="detail-value">{{ formatMetricValue(row.b, row.format) }}</div>
+          <div class="bar-track"><span class="bar-fill fill-b" [style.width.%]="barWidth(row.b, row.a)"></span></div>
+        </div>
+
+        <div class="detail-delta">
+          <span
+            class="delta-pill"
+            [class.positive]="row.tone === 'positive'"
+            [class.negative]="row.tone === 'negative'"
+            [class.neutral]="row.tone === 'neutral'"
+          >
+            {{ formatDelta(row) }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>

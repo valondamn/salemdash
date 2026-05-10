@@ -1,16 +1,31 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { NgFor, NgIf } from '@angular/common';
-import { ReactiveFormsModule, Validators, UntypedFormBuilder, UntypedFormGroup } from '@angular/forms';
+import {
+  FormControl,
+  FormGroup,
+  NonNullableFormBuilder,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { distinctUntilChanged } from 'rxjs';
 import { finalize, timeout } from 'rxjs/operators';
 import { ToastrService } from 'ngx-toastr';
 
 import {
-  SsmApiService,
+  AutoReleaseAddPayload,
   Project,
   EpisodeInfo,
-  AutoReleaseAddPayload,
-} from '../../shared/services/ssm-api.service';
+} from '../../shared/services/ssm-models';
+import { ProjectsApiService } from '../../shared/services/projects-api.service';
+import { ReleasesApiService } from '../../shared/services/releases-api.service';
+
+type AddReleaseForm = FormGroup<{
+  project_id: FormControl<string>;
+  season: FormControl<number>;
+  video_query: FormControl<string>;
+  selected_video_id: FormControl<string>;
+}>;
 
 @Component({
   selector: 'app-add-release-page',
@@ -18,26 +33,28 @@ import {
   imports: [NgIf, NgFor, ReactiveFormsModule],
   templateUrl: './add-release-page.html',
   styleUrl: './add-release-page.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AddReleasePageComponent implements OnInit {
-  loadingProjects = false;
-  loadingVideos = false;
-  submitting = false;
+  private readonly projectsApi = inject(ProjectsApiService);
+  private readonly releasesApi = inject(ReleasesApiService);
+  private readonly fb = inject(NonNullableFormBuilder);
+  private readonly toastr = inject(ToastrService);
+  private readonly destroyRef = inject(DestroyRef);
 
-  error: string | null = null;
-  success: string | null = null;
+  readonly loadingProjects = signal(false);
+  readonly loadingVideos = signal(false);
+  readonly submitting = signal(false);
 
-  projects: Project[] = [];
-  videos: EpisodeInfo[] = [];
+  readonly error = signal<string | null>(null);
+  readonly success = signal<string | null>(null);
 
-  form: UntypedFormGroup;
+  readonly projects = signal<Project[]>([]);
+  readonly videos = signal<EpisodeInfo[]>([]);
 
-  constructor(
-    private api: SsmApiService,
-    private fb: UntypedFormBuilder,
-    private toastr: ToastrService,
-    private cdr: ChangeDetectorRef
-  ) {
+  readonly form: AddReleaseForm;
+
+  constructor() {
     this.form = this.fb.group({
       project_id: ['', Validators.required],
       season: [1, [Validators.required, Validators.min(1)]],
@@ -48,23 +65,37 @@ export class AddReleasePageComponent implements OnInit {
 
   ngOnInit(): void {
     this.form.get('project_id')?.valueChanges
-      .pipe(distinctUntilChanged())
+      .pipe(distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
-        this.success = null;
+        this.success.set(null);
       });
 
     this.loadProjects();
     this.loadAllVideos();
   }
 
+  get selectedProject(): Project | null {
+    const projectId = Number(this.form.controls.project_id.value);
+    return this.projects().find((project) => Number(project.id) === projectId) ?? null;
+  }
+
+  get selectedProjectLabel(): string {
+    return this.selectedProject ? this.getProjectLabel(this.selectedProject) : 'Проект не выбран';
+  }
+
+  get canSubmit(): boolean {
+    return !this.submitting() && !this.loadingProjects() && !this.loadingVideos() && !!this.selectedVideo;
+  }
+
   get filteredVideos(): EpisodeInfo[] {
-    const query = String(this.form.value.video_query ?? '').trim().toLowerCase();
+    const query = this.form.controls.video_query.value.trim().toLowerCase();
+    const videos = this.videos();
 
     if (!query) {
-      return this.videos;
+      return videos;
     }
 
-    return this.videos.filter((video) => {
+    return videos.filter((video) => {
       const haystack = [
         this.getVideoName(video),
         this.getVideoChannel(video),
@@ -79,33 +110,30 @@ export class AddReleasePageComponent implements OnInit {
   }
 
   get selectedVideo(): EpisodeInfo | null {
-    const selectedId = String(this.form.value.selected_video_id ?? '').trim();
+    const selectedId = this.form.controls.selected_video_id.value.trim();
     if (!selectedId) return null;
 
-    return this.videos.find((video) => this.getVideoId(video) === selectedId) ?? null;
+    return this.videos().find((video) => this.getVideoId(video) === selectedId) ?? null;
   }
 
   loadProjects() {
-    this.loadingProjects = true;
-    this.error = null;
+    this.loadingProjects.set(true);
+    this.error.set(null);
 
-    this.api.getProjects().subscribe({
+    this.projectsApi.getProjects().subscribe({
       next: (list) => {
-        this.projects = list ?? [];
+        this.projects.set(list ?? []);
 
-        if (this.projects.length && !this.form.value.project_id) {
-          this.form.patchValue({ project_id: String(this.projects[0].id) });
+        const projects = this.projects();
+        if (projects.length && !this.form.controls.project_id.value) {
+          this.form.patchValue({ project_id: String(projects[0].id) });
         }
-
-        this.cdr.detectChanges();
       },
       error: (e: any) => {
-        this.error = e?.message ?? 'Не удалось загрузить проекты';
-        this.cdr.detectChanges();
+        this.error.set(e?.message ?? 'Не удалось загрузить проекты');
       },
       complete: () => {
-        this.loadingProjects = false;
-        this.cdr.detectChanges();
+        this.loadingProjects.set(false);
       },
     });
   }
@@ -126,12 +154,12 @@ export class AddReleasePageComponent implements OnInit {
   }
 
   isSelected(video: EpisodeInfo) {
-    return this.getVideoId(video) === String(this.form.value.selected_video_id ?? '');
+    return this.getVideoId(video) === this.form.controls.selected_video_id.value;
   }
 
   submit() {
-    this.error = null;
-    this.success = null;
+    this.error.set(null);
+    this.success.set(null);
 
     if (this.form.invalid || !this.selectedVideo) {
       this.form.markAllAsTouched();
@@ -145,7 +173,7 @@ export class AddReleasePageComponent implements OnInit {
 
     if (!youtubeId) {
       const msg = 'У выбранного видео не хватает YouTube ID';
-      this.error = msg;
+      this.error.set(msg);
       this.toastr.error(msg, 'Ошибка');
       return;
     }
@@ -156,16 +184,17 @@ export class AddReleasePageComponent implements OnInit {
       season: Number(formValue.season),
     };
 
-    this.submitting = true;
+    this.submitting.set(true);
 
-    this.api.addAutoRelease(payload).pipe(
+    this.releasesApi.updateAutoRelease(payload).pipe(
       timeout(15000),
       finalize(() => {
-        this.submitting = false;
-      })
+        this.submitting.set(false);
+      }),
+      takeUntilDestroyed(this.destroyRef)
     ).subscribe({
       next: () => {
-        this.success = `Релиз обновлён: "${episodeName}"`;
+        this.success.set(`Релиз обновлён: "${episodeName}"`);
         this.toastr.success('Релиз успешно сохранён', 'Успех');
 
         this.form.patchValue({
@@ -178,7 +207,7 @@ export class AddReleasePageComponent implements OnInit {
       },
       error: (e: any) => {
         const msg = e?.message || 'Не удалось сохранить релиз';
-        this.error = msg;
+        this.error.set(msg);
         this.toastr.error(msg, 'Ошибка');
       },
     });
@@ -220,28 +249,24 @@ export class AddReleasePageComponent implements OnInit {
   }
 
   private loadAllVideos() {
-    this.videos = [];
+    this.videos.set([]);
     this.form.patchValue({
       video_query: '',
       selected_video_id: '',
     });
 
-    this.loadingVideos = true;
-    this.error = null;
-    this.cdr.detectChanges();
+    this.loadingVideos.set(true);
+    this.error.set(null);
 
-    this.api.getProjectInfo(0).subscribe({
+    this.projectsApi.getProjectInfo(0).subscribe({
       next: (rows) => {
-        this.videos = [...(rows ?? [])].sort((a, b) => this.getVideoDate(b).localeCompare(this.getVideoDate(a)));
-        this.cdr.detectChanges();
+        this.videos.set([...(rows ?? [])].sort((a, b) => this.getVideoDate(b).localeCompare(this.getVideoDate(a))));
       },
       error: (e: any) => {
-        this.error = e?.message ?? 'Не удалось загрузить общий список видео';
-        this.cdr.detectChanges();
+        this.error.set(e?.message ?? 'Не удалось загрузить общий список видео');
       },
       complete: () => {
-        this.loadingVideos = false;
-        this.cdr.detectChanges();
+        this.loadingVideos.set(false);
       },
     });
   }

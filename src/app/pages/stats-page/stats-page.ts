@@ -1,39 +1,25 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { NgFor, NgIf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 
+import { Project, EpisodeInfo, UnifiedVisitsRow, InstagramAccount } from '../../shared/services/ssm-models';
+import { ProjectsApiService } from '../../shared/services/projects-api.service';
+import { AnalyticsApiService } from '../../shared/services/analytics-api.service';
 import {
-  SsmApiService,
-  Project,
-  EpisodeInfo,
-  UnifiedVisitsRow,
-  InstagramAccount,
-} from '../../shared/services/ssm-api.service';
-
-import { EpisodesChartComponent } from '../../shared/ui/episodes-chart/episodes-chart';
-import { EngagementChartComponent } from '../../shared/ui/engagement-chart/engagement-chart';
-import { YandexVisitsChartComponent } from '../../shared/ui/yandex-visits-chart/yandex-visits-chart';
-import { ComparisonLineChartComponent } from '../../shared/ui/comparison-line-chart/comparison-line-chart';
-import { InstagramEngagementPieChartComponent } from '../../shared/ui/instagram-engagement-pie-chart/instagram-engagement-pie-chart';
-import { InstagramCompareBarChartComponent } from '../../shared/ui/instagram-compare-bar-chart/instagram-compare-bar-chart';
-
-type Mode = 'single' | 'compare';
-type Source = 'youtube' | 'yandex' | 'instagram';
-type MetricFormat = 'number' | 'percent' | 'decimal';
-type MetricTone = 'positive' | 'negative' | 'neutral';
-type MetricWinner = 'a' | 'b' | 'tie';
-
-type CompareMetricRow = {
-  key: string;
-  label: string;
-  a: number;
-  b: number;
-  format: MetricFormat;
-  delta: number | null;
-  tone: MetricTone;
-  winner: MetricWinner;
-};
+  CompareMetricRow,
+  MetricFormat,
+  MetricTone,
+  MetricWinner,
+  Mode,
+  Source,
+} from './stats.models';
+import { YoutubeSingleStatsComponent } from './youtube-single-stats/youtube-single-stats';
+import { YoutubeCompareStatsComponent } from './youtube-compare-stats/youtube-compare-stats';
+import { YandexSingleStatsComponent } from './yandex-single-stats/yandex-single-stats';
+import { YandexCompareStatsComponent } from './yandex-compare-stats/yandex-compare-stats';
+import { InstagramSingleStatsComponent } from './instagram-single-stats/instagram-single-stats';
+import { InstagramCompareStatsComponent } from './instagram-compare-stats/instagram-compare-stats';
 
 @Component({
   selector: 'app-stats-page',
@@ -42,15 +28,16 @@ type CompareMetricRow = {
     NgFor,
     NgIf,
     FormsModule,
-    EpisodesChartComponent,
-    EngagementChartComponent,
-    YandexVisitsChartComponent,
-    ComparisonLineChartComponent,
-    InstagramEngagementPieChartComponent,
-    InstagramCompareBarChartComponent,
+    YoutubeSingleStatsComponent,
+    YoutubeCompareStatsComponent,
+    YandexSingleStatsComponent,
+    YandexCompareStatsComponent,
+    InstagramSingleStatsComponent,
+    InstagramCompareStatsComponent,
   ],
   templateUrl: './stats-page.html',
   styleUrl: './stats-page.scss',
+  encapsulation: ViewEncapsulation.None,
 })
 export class StatsPageComponent implements OnInit {
   activeSource: Source = 'youtube';
@@ -96,12 +83,45 @@ export class StatsPageComponent implements OnInit {
   loadingInfo = false;
   error: string | null = null;
 
-  constructor(private api: SsmApiService, private cdr: ChangeDetectorRef) {}
+  constructor(
+    private projectsApi: ProjectsApiService,
+    private analyticsApi: AnalyticsApiService
+  ) {}
 
   ngOnInit(): void {
     this.loadProjects();
     this.loadVisits();
     this.loadInstagramAccounts();
+  }
+
+  get hasYoutubeSingleData() {
+    return this.episodes.length > 0;
+  }
+
+  get hasYoutubeCompareData() {
+    return this.episodesA.length > 0 || this.episodesB.length > 0;
+  }
+
+  get hasYandexData() {
+    return this.projectSlugs.length > 0;
+  }
+
+  get hasInstagramData() {
+    return this.instagramAccounts.length > 0;
+  }
+
+  get isLoadingWithoutVisibleData() {
+    if (!this.loadingInfo) return false;
+
+    if (this.activeSource === 'youtube') {
+      return this.mode === 'single' ? !this.hasYoutubeSingleData : !this.hasYoutubeCompareData;
+    }
+
+    if (this.activeSource === 'yandex') {
+      return !this.hasYandexData;
+    }
+
+    return !this.hasInstagramData;
   }
 
   setSource(source: Source) {
@@ -158,24 +178,23 @@ export class StatsPageComponent implements OnInit {
 
   onRefresh() {
     if (this.activeSource === 'youtube') {
-      if (this.mode === 'single') this.loadProjectInfo();
-      else this.loadCompareYouTube();
+      if (this.mode === 'single') this.loadProjectInfo(true);
+      else this.loadCompareYouTube(true);
       return;
     }
 
     if (this.activeSource === 'yandex') {
-      if (this.mode === 'single') this.recalcYandex();
-      else this.recalcCompareYandex();
+      this.loadVisits(true);
       return;
     }
 
-    this.loadInstagramAccounts();
+    this.loadInstagramAccounts(true);
   }
 
-  loadProjects() {
+  loadProjects(force = false) {
     this.error = null;
 
-    this.api.getProjects().subscribe({
+    this.projectsApi.getProjects(force).subscribe({
       next: (list) => {
         this.projects = list ?? [];
 
@@ -187,12 +206,10 @@ export class StatsPageComponent implements OnInit {
         if (this.projects.length > 1 && !this.projectBId) this.projectBId = String(this.projects[1].id);
         if (!this.projectBId && this.projects.length) this.projectBId = String(this.projects[0].id);
 
-        this.loadProjectInfo();
-        this.cdr.detectChanges();
+        this.loadProjectInfo(force);
       },
       error: (e: any) => {
         this.error = e?.message ?? 'Не удалось загрузить проекты';
-        this.cdr.detectChanges();
       },
     });
   }
@@ -201,7 +218,7 @@ export class StatsPageComponent implements OnInit {
     this.loadProjectInfo();
   }
 
-  loadProjectInfo() {
+  loadProjectInfo(force = false) {
     let id = Number(this.selectedProjectId);
     if (!id && this.projects.length) {
       id = Number(this.projects[0].id);
@@ -211,19 +228,16 @@ export class StatsPageComponent implements OnInit {
 
     this.loadingInfo = true;
     this.error = null;
-    this.cdr.detectChanges();
 
-    this.api.getProjectInfo(id).subscribe({
+    this.projectsApi.getProjectInfo(id, force).subscribe({
       next: (rows) => {
         this.episodes = rows ?? [];
         this.computeYouTubeSingle();
         this.loadingInfo = false;
-        this.cdr.detectChanges();
       },
       error: (e: any) => {
         this.error = e?.message ?? 'Не удалось загрузить данные проекта';
         this.loadingInfo = false;
-        this.cdr.detectChanges();
       },
     });
   }
@@ -232,41 +246,41 @@ export class StatsPageComponent implements OnInit {
     this.loadCompareYouTube();
   }
 
-  loadCompareYouTube() {
+  loadCompareYouTube(force = false) {
     const aId = Number(this.projectAId);
     const bId = Number(this.projectBId);
     if (!aId || !bId) return;
 
     this.loadingInfo = true;
     this.error = null;
-    this.cdr.detectChanges();
 
-    forkJoin([this.api.getProjectInfo(aId), this.api.getProjectInfo(bId)]).subscribe({
+    forkJoin([
+      this.projectsApi.getProjectInfo(aId, force),
+      this.projectsApi.getProjectInfo(bId, force),
+    ]).subscribe({
       next: ([projectA, projectB]) => {
         this.episodesA = projectA ?? [];
         this.episodesB = projectB ?? [];
         this.kpiA = this.computeKpi(this.episodesA);
         this.kpiB = this.computeKpi(this.episodesB);
         this.loadingInfo = false;
-        this.cdr.detectChanges();
       },
       error: (e: any) => {
         this.error = e?.message ?? 'Не удалось загрузить сравнение проектов';
         this.loadingInfo = false;
-        this.cdr.detectChanges();
       },
     });
   }
 
-  loadVisits() {
+  loadVisits(force = false) {
     this.error = null;
+    this.loadingInfo = true;
 
-    this.api.getVisits().subscribe({
-      next: (resp) => {
-        const rows = this.api.normalizeVisits(resp).filter((row) => row.type === 'series');
-        this.visitsRows = rows;
-
-        this.projectSlugs = Array.from(new Set(rows.map((row) => row.project_slug))).sort();
+    this.analyticsApi.getNormalizedVisits(force).subscribe({
+      next: (rows) => {
+        const seriesRows = rows.filter((row) => row.type === 'series');
+        this.visitsRows = seriesRows;
+        this.projectSlugs = Array.from(new Set(seriesRows.map((row) => row.project_slug))).sort();
 
         if (!this.selectedSlug && this.projectSlugs.length) this.selectedSlug = this.projectSlugs[0];
         if (!this.slugA && this.projectSlugs.length) this.slugA = this.projectSlugs[0];
@@ -275,31 +289,28 @@ export class StatsPageComponent implements OnInit {
 
         this.recalcYandex();
         this.recalcCompareYandex();
-        this.cdr.detectChanges();
+        this.loadingInfo = false;
       },
       error: (e: any) => {
         this.error = e?.message ?? 'Не удалось загрузить визиты';
-        this.cdr.detectChanges();
+        this.loadingInfo = false;
       },
     });
   }
 
-  loadInstagramAccounts() {
+  loadInstagramAccounts(force = false) {
     this.loadingInfo = true;
     this.error = null;
-    this.cdr.detectChanges();
 
-    this.api.getInstagramAccounts().subscribe({
+    this.analyticsApi.getInstagramAccounts(force).subscribe({
       next: (items) => {
         this.instagramAccounts = [...(items ?? [])].sort((a, b) => b.followers - a.followers);
         this.ensureInstagramDefaults();
         this.loadingInfo = false;
-        this.cdr.detectChanges();
       },
       error: (e: any) => {
         this.error = e?.message ?? 'Не удалось загрузить данные Instagram';
         this.loadingInfo = false;
-        this.cdr.detectChanges();
       },
     });
   }
@@ -452,14 +463,68 @@ export class StatsPageComponent implements OnInit {
 
   getSourceDescription() {
     if (this.activeSource === 'youtube') {
-      return 'Показатели по эпизодам YouTube: просмотры, лайки, комментарии и вовлечённость.';
+      return 'Эпизоды, охват и вовлечённость.';
     }
 
     if (this.activeSource === 'yandex') {
-      return 'Данные Яндекс Метрики по сериям: визиты и пользователи.';
+      return 'Визиты и пользователи по сериям.';
     }
 
-    return 'Сводные метрики Instagram по аккаунтам: подписчики, охваты, лайки, комментарии и сохранения.';
+    return 'Snapshot по Instagram-аккаунтам.';
+  }
+
+  getSelectionHint() {
+    if (this.activeSource === 'youtube') {
+      return this.mode === 'compare'
+        ? 'Сравнение двух проектов.'
+        : 'Выбор по проекту.';
+    }
+
+    if (this.activeSource === 'yandex') {
+      return 'Выбор идёт по slug проекта.';
+    }
+
+    return 'Выбор идёт по аккаунту.';
+  }
+
+  getLoadingMessage() {
+    if (this.activeSource === 'youtube') {
+      return this.mode === 'compare'
+        ? 'Загружаем два проекта.'
+        : 'Загружаем проект.';
+    }
+
+    if (this.activeSource === 'yandex') {
+      return 'Обновляем ряды Метрики.';
+    }
+
+    return 'Обновляем Instagram-данные.';
+  }
+
+  getEmptyStateTitle() {
+    if (this.activeSource === 'youtube') {
+      return this.mode === 'compare' ? 'Пока нет данных для сравнения YouTube' : 'По этому проекту нет YouTube-данных';
+    }
+
+    if (this.activeSource === 'yandex') {
+      return 'По Яндекс Метрике пока нет данных';
+    }
+
+    return 'По Instagram пока нет данных';
+  }
+
+  getEmptyStateCopy() {
+    if (this.activeSource === 'youtube') {
+      return this.mode === 'compare'
+        ? 'Выберите два проекта или обновите данные.'
+        : 'Попробуйте другой проект.';
+    }
+
+    if (this.activeSource === 'yandex') {
+      return 'Данные появятся после ответа API.';
+    }
+
+    return 'Данные появятся после ответа API.';
   }
 
   getSingleHeadline() {
@@ -513,53 +578,6 @@ export class StatsPageComponent implements OnInit {
     return `${labelB} лидирует в ${winsB} из ${rows.length} ключевых метрик.`;
   }
 
-  countWins(rows: CompareMetricRow[], winner: MetricWinner) {
-    return rows.filter((row) => row.winner === winner).length;
-  }
-
-  formatMetricValue(value: number, format: MetricFormat, compact = false) {
-    if (format === 'percent') {
-      return `${Intl.NumberFormat('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)}%`;
-    }
-
-    if (format === 'decimal') {
-      return Intl.NumberFormat('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
-    }
-
-    if (compact) {
-      return this.fmtCompact(value);
-    }
-
-    return this.fmt(value);
-  }
-
-  formatDelta(row: CompareMetricRow) {
-    if (row.delta == null) {
-      return row.winner === 'a' ? 'Новый лидер' : '—';
-    }
-
-    const sign = row.delta > 0 ? '+' : '';
-    return `${sign}${row.delta.toFixed(1)}%`;
-  }
-
-  barWidth(value: number, otherValue: number) {
-    const max = Math.max(value, otherValue, 1);
-    return (value / max) * 100;
-  }
-
-  trackByMetric = (_: number, row: CompareMetricRow) => row.key;
-
-  fmt(value: number) {
-    return Intl.NumberFormat('ru-RU').format(value);
-  }
-
-  fmtCompact(value: number) {
-    return Intl.NumberFormat('ru-RU', {
-      notation: 'compact',
-      maximumFractionDigits: 1,
-    }).format(value);
-  }
-
   getProjectNameById(id: string) {
     const projectId = Number(id);
     const project = this.projects.find((item) => Number(item.id) === projectId);
@@ -575,8 +593,8 @@ export class StatsPageComponent implements OnInit {
     return account?.page_name || (account?.username ? `@${account.username}` : 'Instagram аккаунт');
   }
 
-  instagramUrl(username: string) {
-    return username ? `https://www.instagram.com/${username}/` : '#';
+  private countWins(rows: CompareMetricRow[], winner: MetricWinner) {
+    return rows.filter((row) => row.winner === winner).length;
   }
 
   private ensureInstagramDefaults() {
@@ -608,7 +626,6 @@ export class StatsPageComponent implements OnInit {
     this.totalComments = episodes.reduce((sum, episode) => sum + (Number(episode.youtube_comments) || 0), 0);
     this.avgViews = episodes.length ? Math.round(this.totalViews / episodes.length) : 0;
     this.engagementRate = this.totalViews ? ((this.totalLikes + this.totalComments) / this.totalViews) * 100 : 0;
-
     this.topEpisodes = [...episodes]
       .sort((a, b) => (Number(b.youtube_views) || 0) - (Number(a.youtube_views) || 0))
       .slice(0, 5);

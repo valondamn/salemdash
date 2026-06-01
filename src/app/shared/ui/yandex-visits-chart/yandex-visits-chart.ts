@@ -1,6 +1,6 @@
 import { AfterViewInit, Component, ElementRef, HostListener, Input, OnChanges, SimpleChanges, ViewChild } from '@angular/core';
 import * as echarts from 'echarts';
-import { UnifiedVisitsRow } from '../../services/ssm-api.service';
+import { YandexProjectUrlMetric } from '../../services/ssm-models';
 
 @Component({
   selector: 'app-yandex-visits-chart',
@@ -9,8 +9,8 @@ import { UnifiedVisitsRow } from '../../services/ssm-api.service';
   styleUrl: './yandex-visits-chart.scss',
 })
 export class YandexVisitsChartComponent implements AfterViewInit, OnChanges {
-  @Input() rows: UnifiedVisitsRow[] = [];
-  @Input() slug: string = '';
+  @Input() items: YandexProjectUrlMetric[] = [];
+  @Input() label: string = '';
 
   @ViewChild('chartEl', { static: true }) chartEl!: ElementRef<HTMLDivElement>;
   private chart?: echarts.ECharts;
@@ -21,7 +21,7 @@ export class YandexVisitsChartComponent implements AfterViewInit, OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['rows'] || changes['slug']) this.render();
+    if (changes['items'] || changes['label']) this.render();
   }
 
   @HostListener('window:resize')
@@ -46,19 +46,13 @@ export class YandexVisitsChartComponent implements AfterViewInit, OnChanges {
     const accent = this.cssVar('--chart-line') || '#22d3ee';
     const accentSecondary = this.cssVar('--chart-success') || '#22c55e';
 
-    const list = (this.rows ?? [])
-      .filter(r => !this.slug || r.project_slug === this.slug)
-      .filter(r => r.type === 'series')
-      // сортируем по номеру series_12
-      .sort((a, b) => {
-        const ai = Number(String(a.key).split('_')[1]) || 0;
-        const bi = Number(String(b.key).split('_')[1]) || 0;
-        return ai - bi;
-      });
+    const list = [...(this.items ?? [])]
+      .sort((a, b) => (b.count - a.count))
+      .slice(0, 12);
 
-    const x = list.map((r, i) => `#${i + 1}`);
-    const visits = list.map(r => Number(r.yandex_visits) || 0);
-    const users = list.map(r => Number(r.yandex_users) || 0);
+    const x = list.map((item, i) => item.name || `#${i + 1}`);
+    const visits = list.map(item => Number(item.count) || 0);
+    const users = list.map(item => Number(item.kz_count) || 0);
 
     const option: echarts.EChartsOption = {
       tooltip: {
@@ -67,9 +61,9 @@ export class YandexVisitsChartComponent implements AfterViewInit, OnChanges {
           const i = params?.[0]?.dataIndex ?? 0;
           return `
             <div style="min-width:180px">
-              <div style="font-weight:800;margin-bottom:6px">${this.slug || 'project'} • ${x[i]}</div>
-              <div>Пользователи: <b>${this.fmtCompact(users[i] ?? 0)}</b></div>
-              <div>Визиты: <b>${this.fmtCompact(visits[i] ?? 0)}</b></div>
+              <div style="font-weight:800;margin-bottom:6px">${this.label || 'project'} • ${x[i]}</div>
+              <div>KZ: <b>${this.fmtCompact(users[i] ?? 0)}</b></div>
+              <div>Total: <b>${this.fmtCompact(visits[i] ?? 0)}</b></div>
             </div>
           `;
         },
@@ -98,7 +92,7 @@ export class YandexVisitsChartComponent implements AfterViewInit, OnChanges {
       yAxis: [
         {
           type: 'value',
-          name: 'Визиты',
+          name: 'Total',
           axisLabel: { color: text, formatter: (v: any) => this.fmtCompact(Number(v) || 0) },
           splitLine: { lineStyle: { color: grid } },
           axisLine: { lineStyle: { color: axis } },
@@ -106,7 +100,7 @@ export class YandexVisitsChartComponent implements AfterViewInit, OnChanges {
         },
         {
           type: 'value',
-          name: 'Пользователи',
+          name: 'KZ',
           axisLabel: { color: text, formatter: (v: any) => this.fmtCompact(Number(v) || 0) },
           splitLine: { show: false },
           axisLine: { lineStyle: { color: axis } },
@@ -115,14 +109,14 @@ export class YandexVisitsChartComponent implements AfterViewInit, OnChanges {
       ],
       series: [
         {
-          name: 'Визиты',
+          name: 'Total',
           type: 'bar',
           data: visits,
           barWidth: 12,
           itemStyle: { color: accent, opacity: 0.8, borderRadius: [10, 10, 0, 0] },
         },
         {
-          name: 'Пользователи',
+          name: 'KZ',
           type: 'line',
           yAxisIndex: 1,
           smooth: true,

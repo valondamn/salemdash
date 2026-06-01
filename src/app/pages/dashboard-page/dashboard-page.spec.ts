@@ -1,20 +1,44 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { of } from 'rxjs';
 
-import { DashboardPage } from './dashboard-page';
+import { AnalyticsApiService } from '../../shared/services/analytics-api.service';
+import { ProjectsApiService } from '../../shared/services/projects-api.service';
+import { DashboardPageComponent } from './dashboard-page';
 
-describe('DashboardPage', () => {
-  let component: DashboardPage;
-  let fixture: ComponentFixture<DashboardPage>;
+describe('DashboardPageComponent', () => {
+  let component: DashboardPageComponent;
+  let fixture: ComponentFixture<DashboardPageComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [DashboardPage]
-    })
-    .compileComponents();
+      imports: [DashboardPageComponent],
+      providers: [
+        { provide: ProjectsApiService, useValue: { getProjects: () => of([]), getProjectInfo: () => of([]) } },
+        {
+          provide: AnalyticsApiService,
+          useValue: {
+            getYoutubeChannels: () => of([]),
+            getInstagramAccounts: () => of([]),
+            getYandexTotal: () => of({ total_count: 0, total_kz_count: 0, url_count: 0 }),
+            getYandexProjects: () => of([]),
+            getTikTokTotal: () => of({
+              accounts_count: 0,
+              total_comments: 0,
+              total_followers: 0,
+              total_likes: 0,
+              total_profile_likes: 0,
+              total_shares: 0,
+              total_videos: 0,
+              total_views: 0,
+            }),
+            getTikTokTotalsByAccount: () => of([]),
+          },
+        },
+      ],
+    }).compileComponents();
 
-    fixture = TestBed.createComponent(DashboardPage);
+    fixture = TestBed.createComponent(DashboardPageComponent);
     component = fixture.componentInstance;
-    await fixture.whenStable();
   });
 
   it('should create', () => {

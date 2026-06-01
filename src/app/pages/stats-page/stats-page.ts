@@ -1,9 +1,10 @@
-import { Component, OnInit, ViewEncapsulation } from '@angular/core';
+import { ChangeDetectorRef, Component, NgZone, OnInit, ViewEncapsulation } from '@angular/core';
 import { NgFor, NgIf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
+import { finalize } from 'rxjs/operators';
 
-import { Project, EpisodeInfo, UnifiedVisitsRow, InstagramAccount } from '../../shared/services/ssm-models';
+import { Project, EpisodeInfo, InstagramAccount, YandexProjectAnalytics } from '../../shared/services/ssm-models';
 import { ProjectsApiService } from '../../shared/services/projects-api.service';
 import { AnalyticsApiService } from '../../shared/services/analytics-api.service';
 import {
@@ -40,6 +41,9 @@ import { InstagramCompareStatsComponent } from './instagram-compare-stats/instag
   encapsulation: ViewEncapsulation.None,
 })
 export class StatsPageComponent implements OnInit {
+  private readonly projectLoadTimeoutMs = 15000;
+  private projectLoadTimer: number | null = null;
+
   activeSource: Source = 'youtube';
   mode: Mode = 'single';
 
@@ -62,35 +66,32 @@ export class StatsPageComponent implements OnInit {
   kpiA = { views: 0, likes: 0, comments: 0, avgViews: 0, engagement: 0, episodes: 0 };
   kpiB = { views: 0, likes: 0, comments: 0, avgViews: 0, engagement: 0, episodes: 0 };
 
-  visitsRows: UnifiedVisitsRow[] = [];
-  projectSlugs: string[] = [];
-
-  selectedSlug = '';
-  yandexUsers = 0;
-  yandexVisits = 0;
-  yandexVisitsPerUser = 0;
-
-  slugA = '';
-  slugB = '';
-  yandexA = { users: 0, visits: 0, visitsPerUser: 0 };
-  yandexB = { users: 0, visits: 0, visitsPerUser: 0 };
+  yandexProjectId = '';
+  yandexProjectAId = '';
+  yandexProjectBId = '';
+  yandexSingle: YandexProjectAnalytics | null = null;
+  yandexProjectA: YandexProjectAnalytics | null = null;
+  yandexProjectB: YandexProjectAnalytics | null = null;
 
   instagramAccounts: InstagramAccount[] = [];
   selectedInstagramId = '';
   instagramAId = '';
   instagramBId = '';
 
+  loadingProjects = false;
+  loadingInstagram = false;
   loadingInfo = false;
   error: string | null = null;
 
   constructor(
     private projectsApi: ProjectsApiService,
-    private analyticsApi: AnalyticsApiService
+    private analyticsApi: AnalyticsApiService,
+    private zone: NgZone,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     this.loadProjects();
-    this.loadVisits();
     this.loadInstagramAccounts();
   }
 
@@ -103,7 +104,7 @@ export class StatsPageComponent implements OnInit {
   }
 
   get hasYandexData() {
-    return this.projectSlugs.length > 0;
+    return this.mode === 'single' ? !!this.yandexSingle : !!this.yandexProjectA || !!this.yandexProjectB;
   }
 
   get hasInstagramData() {
@@ -111,7 +112,7 @@ export class StatsPageComponent implements OnInit {
   }
 
   get isLoadingWithoutVisibleData() {
-    if (!this.loadingInfo) return false;
+    if (!this.currentLoading) return false;
 
     if (this.activeSource === 'youtube') {
       return this.mode === 'single' ? !this.hasYoutubeSingleData : !this.hasYoutubeCompareData;
@@ -124,6 +125,10 @@ export class StatsPageComponent implements OnInit {
     return !this.hasInstagramData;
   }
 
+  get currentLoading() {
+    return this.activeSource === 'instagram' ? this.loadingInstagram : this.loadingInfo;
+  }
+
   setSource(source: Source) {
     this.activeSource = source;
 
@@ -131,7 +136,7 @@ export class StatsPageComponent implements OnInit {
       if (source === 'youtube') {
         this.loadCompareYouTube();
       } else if (source === 'yandex') {
-        this.recalcCompareYandex();
+        this.loadCompareYandex();
       } else {
         this.ensureInstagramDefaults();
       }
@@ -141,7 +146,7 @@ export class StatsPageComponent implements OnInit {
     if (source === 'youtube') {
       this.loadProjectInfo();
     } else if (source === 'yandex') {
-      this.recalcYandex();
+      this.loadYandexSingle();
     } else {
       this.ensureInstagramDefaults();
     }
@@ -157,10 +162,10 @@ export class StatsPageComponent implements OnInit {
         if (!this.projectBId && this.projects.length) this.projectBId = String(this.projects[0].id);
         this.loadCompareYouTube();
       } else if (this.activeSource === 'yandex') {
-        if (!this.slugA && this.projectSlugs.length) this.slugA = this.projectSlugs[0];
-        if (!this.slugB && this.projectSlugs.length > 1) this.slugB = this.projectSlugs[1];
-        if (!this.slugB && this.projectSlugs.length) this.slugB = this.projectSlugs[0];
-        this.recalcCompareYandex();
+        if (!this.yandexProjectAId && this.projects.length) this.yandexProjectAId = String(this.projects[0].id);
+        if (!this.yandexProjectBId && this.projects.length > 1) this.yandexProjectBId = String(this.projects[1].id);
+        if (!this.yandexProjectBId && this.projects.length) this.yandexProjectBId = String(this.projects[0].id);
+        this.loadCompareYandex();
       } else {
         this.ensureInstagramDefaults();
       }
@@ -170,13 +175,18 @@ export class StatsPageComponent implements OnInit {
     if (this.activeSource === 'youtube') {
       this.loadProjectInfo();
     } else if (this.activeSource === 'yandex') {
-      this.recalcYandex();
+      this.loadYandexSingle();
     } else {
       this.ensureInstagramDefaults();
     }
   }
 
   onRefresh() {
+    if (!this.projects.length && (this.activeSource === 'youtube' || this.activeSource === 'yandex')) {
+      this.loadProjects(true);
+      return;
+    }
+
     if (this.activeSource === 'youtube') {
       if (this.mode === 'single') this.loadProjectInfo(true);
       else this.loadCompareYouTube(true);
@@ -184,7 +194,8 @@ export class StatsPageComponent implements OnInit {
     }
 
     if (this.activeSource === 'yandex') {
-      this.loadVisits(true);
+      if (this.mode === 'single') this.loadYandexSingle(true);
+      else this.loadCompareYandex(true);
       return;
     }
 
@@ -192,24 +203,39 @@ export class StatsPageComponent implements OnInit {
   }
 
   loadProjects(force = false) {
+    this.loadingProjects = true;
     this.error = null;
+    this.startProjectLoadTimer();
 
-    this.projectsApi.getProjects(force).subscribe({
+    this.projectsApi.getProjects(force).pipe(finalize(() => (this.loadingProjects = false))).subscribe({
       next: (list) => {
+        this.clearProjectLoadTimer();
+        this.error = null;
         this.projects = list ?? [];
 
         if (this.projects.length && !this.selectedProjectId) {
           this.selectedProjectId = String(this.projects[0].id);
         }
 
+        if (this.projects.length && !this.yandexProjectId) this.yandexProjectId = String(this.projects[0].id);
+        if (this.projects.length && !this.yandexProjectAId) this.yandexProjectAId = String(this.projects[0].id);
+        if (this.projects.length > 1 && !this.yandexProjectBId) this.yandexProjectBId = String(this.projects[1].id);
+        if (!this.yandexProjectBId && this.projects.length) this.yandexProjectBId = String(this.projects[0].id);
+
         if (this.projects.length && !this.projectAId) this.projectAId = String(this.projects[0].id);
         if (this.projects.length > 1 && !this.projectBId) this.projectBId = String(this.projects[1].id);
         if (!this.projectBId && this.projects.length) this.projectBId = String(this.projects[0].id);
 
-        this.loadProjectInfo(force);
+        if (this.activeSource === 'youtube') {
+          this.loadProjectInfo(force);
+        } else if (this.activeSource === 'yandex') {
+          this.loadYandexSingle(force);
+        }
       },
       error: (e: any) => {
+        this.clearProjectLoadTimer();
         this.error = e?.message ?? 'Не удалось загрузить проекты';
+        this.loadingInfo = false;
       },
     });
   }
@@ -224,7 +250,10 @@ export class StatsPageComponent implements OnInit {
       id = Number(this.projects[0].id);
       this.selectedProjectId = String(id);
     }
-    if (!id) return;
+    if (!id) {
+      this.loadingInfo = false;
+      return;
+    }
 
     this.loadingInfo = true;
     this.error = null;
@@ -249,7 +278,10 @@ export class StatsPageComponent implements OnInit {
   loadCompareYouTube(force = false) {
     const aId = Number(this.projectAId);
     const bId = Number(this.projectBId);
-    if (!aId || !bId) return;
+    if (!aId || !bId) {
+      this.loadingInfo = false;
+      return;
+    }
 
     this.loadingInfo = true;
     this.error = null;
@@ -272,80 +304,84 @@ export class StatsPageComponent implements OnInit {
     });
   }
 
-  loadVisits(force = false) {
-    this.error = null;
-    this.loadingInfo = true;
-
-    this.analyticsApi.getNormalizedVisits(force).subscribe({
-      next: (rows) => {
-        const seriesRows = rows.filter((row) => row.type === 'series');
-        this.visitsRows = seriesRows;
-        this.projectSlugs = Array.from(new Set(seriesRows.map((row) => row.project_slug))).sort();
-
-        if (!this.selectedSlug && this.projectSlugs.length) this.selectedSlug = this.projectSlugs[0];
-        if (!this.slugA && this.projectSlugs.length) this.slugA = this.projectSlugs[0];
-        if (!this.slugB && this.projectSlugs.length > 1) this.slugB = this.projectSlugs[1];
-        if (!this.slugB && this.projectSlugs.length) this.slugB = this.projectSlugs[0];
-
-        this.recalcYandex();
-        this.recalcCompareYandex();
-        this.loadingInfo = false;
-      },
-      error: (e: any) => {
-        this.error = e?.message ?? 'Не удалось загрузить визиты';
-        this.loadingInfo = false;
-      },
-    });
-  }
-
   loadInstagramAccounts(force = false) {
-    this.loadingInfo = true;
-    this.error = null;
+    this.loadingInstagram = true;
+    if (this.activeSource === 'instagram') {
+      this.error = null;
+    }
 
-    this.analyticsApi.getInstagramAccounts(force).subscribe({
+    this.analyticsApi.getInstagramAccounts(force).pipe(finalize(() => (this.loadingInstagram = false))).subscribe({
       next: (items) => {
         this.instagramAccounts = [...(items ?? [])].sort((a, b) => b.followers - a.followers);
         this.ensureInstagramDefaults();
+      },
+      error: (e: any) => {
+        if (this.activeSource === 'instagram') {
+          this.error = e?.message ?? 'Не удалось загрузить данные Instagram';
+        }
+      },
+    });
+  }
+
+  onYandexProjectChange() {
+    this.loadYandexSingle();
+  }
+
+  onCompareYandexProjectsChange() {
+    this.loadCompareYandex();
+  }
+
+  loadYandexSingle(force = false) {
+    let id = Number(this.yandexProjectId);
+    if (!id && this.projects.length) {
+      id = Number(this.projects[0].id);
+      this.yandexProjectId = String(id);
+    }
+    if (!id) {
+      this.loadingInfo = false;
+      return;
+    }
+
+    this.loadingInfo = true;
+    this.error = null;
+
+    this.analyticsApi.getYandexByProjectId(id, force).subscribe({
+      next: (data) => {
+        this.yandexSingle = data;
         this.loadingInfo = false;
       },
       error: (e: any) => {
-        this.error = e?.message ?? 'Не удалось загрузить данные Instagram';
+        this.error = e?.message ?? 'Не удалось загрузить Yandex по проекту';
         this.loadingInfo = false;
       },
     });
   }
 
-  recalcYandex() {
-    const list = this.seriesRowsForSlug(this.selectedSlug);
-    this.yandexUsers = list.reduce((sum, row) => sum + (Number(row.yandex_users) || 0), 0);
-    this.yandexVisits = list.reduce((sum, row) => sum + (Number(row.yandex_visits) || 0), 0);
-    this.yandexVisitsPerUser = this.yandexUsers ? this.yandexVisits / this.yandexUsers : 0;
-  }
+  loadCompareYandex(force = false) {
+    const aId = Number(this.yandexProjectAId);
+    const bId = Number(this.yandexProjectBId);
+    if (!aId || !bId) {
+      this.loadingInfo = false;
+      return;
+    }
 
-  onCompareSlugsChange() {
-    this.recalcCompareYandex();
-  }
+    this.loadingInfo = true;
+    this.error = null;
 
-  recalcCompareYandex() {
-    const listA = this.seriesRowsForSlug(this.slugA);
-    const listB = this.seriesRowsForSlug(this.slugB);
-
-    const usersA = listA.reduce((sum, row) => sum + (Number(row.yandex_users) || 0), 0);
-    const visitsA = listA.reduce((sum, row) => sum + (Number(row.yandex_visits) || 0), 0);
-    const usersB = listB.reduce((sum, row) => sum + (Number(row.yandex_users) || 0), 0);
-    const visitsB = listB.reduce((sum, row) => sum + (Number(row.yandex_visits) || 0), 0);
-
-    this.yandexA = {
-      users: usersA,
-      visits: visitsA,
-      visitsPerUser: usersA ? visitsA / usersA : 0,
-    };
-
-    this.yandexB = {
-      users: usersB,
-      visits: visitsB,
-      visitsPerUser: usersB ? visitsB / usersB : 0,
-    };
+    forkJoin([
+      this.analyticsApi.getYandexByProjectId(aId, force),
+      this.analyticsApi.getYandexByProjectId(bId, force),
+    ]).subscribe({
+      next: ([a, b]) => {
+        this.yandexProjectA = a;
+        this.yandexProjectB = b;
+        this.loadingInfo = false;
+      },
+      error: (e: any) => {
+        this.error = e?.message ?? 'Не удалось загрузить сравнение Yandex';
+        this.loadingInfo = false;
+      },
+    });
   }
 
   get selectedInstagramAccount(): InstagramAccount | null {
@@ -372,14 +408,18 @@ export class StatsPageComponent implements OnInit {
   }
 
   get yandexCompareRows(): CompareMetricRow[] {
+    const a = this.yandexProjectA;
+    const b = this.yandexProjectB;
+
     return [
-      this.buildCompareMetric('users', 'Пользователи', this.yandexA.users, this.yandexB.users, 'number'),
-      this.buildCompareMetric('visits', 'Визиты', this.yandexA.visits, this.yandexB.visits, 'number'),
+      this.buildCompareMetric('totalCount', 'Total', a?.total_count || 0, b?.total_count || 0, 'number'),
+      this.buildCompareMetric('totalKzCount', 'KZ Total', a?.total_kz_count || 0, b?.total_kz_count || 0, 'number'),
+      this.buildCompareMetric('urlCount', 'URL', a?.url_count || 0, b?.url_count || 0, 'number'),
       this.buildCompareMetric(
-        'visitsPerUser',
-        'Визитов на пользователя',
-        this.yandexA.visitsPerUser,
-        this.yandexB.visitsPerUser,
+        'avgPerUrl',
+        'Total / URL',
+        a?.url_count ? a.total_count / a.url_count : 0,
+        b?.url_count ? b.total_count / b.url_count : 0,
         'decimal'
       ),
     ];
@@ -424,29 +464,26 @@ export class StatsPageComponent implements OnInit {
   }
 
   get yandexCompareLabels(): string[] {
-    const rowsA = this.seriesRowsForSlug(this.slugA);
-    const rowsB = this.seriesRowsForSlug(this.slugB);
-    const labelsA = rowsA.map((row, index) => this.seriesRowLabel(row, index));
-    const labelsB = rowsB.map((row, index) => this.seriesRowLabel(row, index));
-    const length = Math.max(labelsA.length, labelsB.length);
-
-    return Array.from({ length }, (_, index) => labelsA[index] || labelsB[index] || `#${index + 1}`);
+    const a = this.sortYandexItems(this.yandexProjectA?.items ?? []);
+    const b = this.sortYandexItems(this.yandexProjectB?.items ?? []);
+    const length = Math.max(a.length, b.length, 1);
+    return Array.from({ length }, (_, index) => `#${index + 1}`);
   }
 
-  get yandexVisitsSeriesA(): Array<number | null> {
-    return this.seriesRowsForSlug(this.slugA).map((row) => Number(row.yandex_visits) || 0);
+  get yandexTotalSeriesA(): Array<number | null> {
+    return this.sortYandexItems(this.yandexProjectA?.items ?? []).map((item) => item.count);
   }
 
-  get yandexVisitsSeriesB(): Array<number | null> {
-    return this.seriesRowsForSlug(this.slugB).map((row) => Number(row.yandex_visits) || 0);
+  get yandexTotalSeriesB(): Array<number | null> {
+    return this.sortYandexItems(this.yandexProjectB?.items ?? []).map((item) => item.count);
   }
 
-  get yandexUsersSeriesA(): Array<number | null> {
-    return this.seriesRowsForSlug(this.slugA).map((row) => Number(row.yandex_users) || 0);
+  get yandexKzSeriesA(): Array<number | null> {
+    return this.sortYandexItems(this.yandexProjectA?.items ?? []).map((item) => item.kz_count);
   }
 
-  get yandexUsersSeriesB(): Array<number | null> {
-    return this.seriesRowsForSlug(this.slugB).map((row) => Number(row.yandex_users) || 0);
+  get yandexKzSeriesB(): Array<number | null> {
+    return this.sortYandexItems(this.yandexProjectB?.items ?? []).map((item) => item.kz_count);
   }
 
   get instagramPerPostLabels(): string[] {
@@ -467,7 +504,7 @@ export class StatsPageComponent implements OnInit {
     }
 
     if (this.activeSource === 'yandex') {
-      return 'Визиты и пользователи по сериям.';
+      return 'Суммы по URL и проектам из Яндекс Метрики.';
     }
 
     return 'Snapshot по Instagram-аккаунтам.';
@@ -481,13 +518,17 @@ export class StatsPageComponent implements OnInit {
     }
 
     if (this.activeSource === 'yandex') {
-      return 'Выбор идёт по slug проекта.';
+      return 'Выбор идёт по projectId.';
     }
 
     return 'Выбор идёт по аккаунту.';
   }
 
   getLoadingMessage() {
+    if (this.loadingProjects) {
+      return 'Загружаем список проектов.';
+    }
+
     if (this.activeSource === 'youtube') {
       return this.mode === 'compare'
         ? 'Загружаем два проекта.'
@@ -495,7 +536,9 @@ export class StatsPageComponent implements OnInit {
     }
 
     if (this.activeSource === 'yandex') {
-      return 'Обновляем ряды Метрики.';
+      return this.mode === 'compare'
+        ? 'Обновляем два projectId.'
+        : 'Обновляем данные по projectId.';
     }
 
     return 'Обновляем Instagram-данные.';
@@ -533,7 +576,7 @@ export class StatsPageComponent implements OnInit {
     }
 
     if (this.activeSource === 'yandex') {
-      return `${this.getSlugLabel(this.selectedSlug)} — обзор`;
+      return `${this.getProjectNameById(this.yandexProjectId)} — обзор`;
     }
 
     return `${this.getInstagramLabelById(this.selectedInstagramId)} — обзор`;
@@ -545,7 +588,7 @@ export class StatsPageComponent implements OnInit {
     }
 
     if (this.activeSource === 'yandex') {
-      return this.getSlugLabel(this.slugA);
+      return this.getProjectNameById(this.yandexProjectAId);
     }
 
     return this.getInstagramLabelById(this.instagramAId);
@@ -557,7 +600,7 @@ export class StatsPageComponent implements OnInit {
     }
 
     if (this.activeSource === 'yandex') {
-      return this.getSlugLabel(this.slugB);
+      return this.getProjectNameById(this.yandexProjectBId);
     }
 
     return this.getInstagramLabelById(this.instagramBId);
@@ -584,10 +627,6 @@ export class StatsPageComponent implements OnInit {
     return project?.name || project?.utm_name || `Проект ${id}`;
   }
 
-  getSlugLabel(slug: string) {
-    return slug ? slug.replace(/[_-]+/g, ' ') : 'Проект';
-  }
-
   getInstagramLabelById(id: string) {
     const account = this.findInstagramAccount(id);
     return account?.page_name || (account?.username ? `@${account.username}` : 'Instagram аккаунт');
@@ -595,6 +634,27 @@ export class StatsPageComponent implements OnInit {
 
   private countWins(rows: CompareMetricRow[], winner: MetricWinner) {
     return rows.filter((row) => row.winner === winner).length;
+  }
+
+  private startProjectLoadTimer() {
+    this.clearProjectLoadTimer();
+    this.projectLoadTimer = window.setTimeout(() => {
+      if (!this.loadingProjects) return;
+
+      this.zone.run(() => {
+        this.loadingProjects = false;
+        this.loadingInfo = false;
+        this.error = 'Список проектов загружается дольше обычного. Попробуйте обновить данные ещё раз.';
+        this.cdr.detectChanges();
+      });
+    }, this.projectLoadTimeoutMs);
+  }
+
+  private clearProjectLoadTimer() {
+    if (!this.projectLoadTimer) return;
+
+    window.clearTimeout(this.projectLoadTimer);
+    this.projectLoadTimer = null;
   }
 
   private ensureInstagramDefaults() {
@@ -655,23 +715,14 @@ export class StatsPageComponent implements OnInit {
     return { key, label, a, b, format, delta, tone, winner };
   }
 
-  private seriesRowsForSlug(slug: string) {
-    return [...this.visitsRows]
-      .filter((row) => row.project_slug === slug)
-      .sort((a, b) => {
-        const left = Number(String(a.key).split('_')[1]) || 0;
-        const right = Number(String(b.key).split('_')[1]) || 0;
-        return left - right;
-      });
-  }
-
-  private seriesRowLabel(row: UnifiedVisitsRow, index: number) {
-    const itemIndex = Number(String(row.key).split('_')[1]);
-    return `#${itemIndex || index + 1}`;
-  }
-
   private buildIndexedLabels(length: number) {
     return Array.from({ length }, (_, index) => `#${index + 1}`);
+  }
+
+  private sortYandexItems(items: YandexProjectAnalytics['items']) {
+    return [...items]
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 12);
   }
 
   private episodeSeries(

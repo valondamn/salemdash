@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 
 import { YandexVisitsChartComponent } from '../../../shared/ui/yandex-visits-chart/yandex-visits-chart';
-import { UnifiedVisitsRow } from '../../../shared/services/ssm-models';
+import { YandexProjectUrlMetric } from '../../../shared/services/ssm-models';
 
 @Component({
   selector: 'app-yandex-single-stats',
@@ -13,12 +13,11 @@ import { UnifiedVisitsRow } from '../../../shared/services/ssm-models';
 })
 export class YandexSingleStatsComponent {
   @Input({ required: true }) headline = '';
-  @Input({ required: true }) slugLabel = '';
-  @Input({ required: true }) users = 0;
-  @Input({ required: true }) visits = 0;
-  @Input({ required: true }) visitsPerUser = 0;
-  @Input({ required: true }) rows: UnifiedVisitsRow[] = [];
-  @Input({ required: true }) slug = '';
+  @Input({ required: true }) projectName = '';
+  @Input({ required: true }) totalCount = 0;
+  @Input({ required: true }) totalKzCount = 0;
+  @Input({ required: true }) urlCount = 0;
+  @Input({ required: true }) items: YandexProjectUrlMetric[] = [];
 
   fmtCompact(value: number) {
     return Intl.NumberFormat('ru-RU', {
@@ -32,5 +31,13 @@ export class YandexSingleStatsComponent {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(value);
+  }
+
+  get avgPerUrl() {
+    return this.urlCount ? this.totalCount / this.urlCount : 0;
+  }
+
+  get avgKzPerUrl() {
+    return this.urlCount ? this.totalKzCount / this.urlCount : 0;
   }
 }

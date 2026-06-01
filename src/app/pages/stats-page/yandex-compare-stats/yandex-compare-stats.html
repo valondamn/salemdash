@@ -39,13 +39,13 @@
     <section class="card panel chart-panel">
       <div class="panel-head">
         <div>
-          <div class="panel-title">Динамика визитов по сериям</div>
+          <div class="panel-title">Total по top URL</div>
         </div>
       </div>
       <app-comparison-line-chart
         [labels]="labels"
-        [seriesA]="visitsSeriesA"
-        [seriesB]="visitsSeriesB"
+        [seriesA]="totalSeriesA"
+        [seriesB]="totalSeriesB"
         [nameA]="primaryLabel"
         [nameB]="secondaryLabel"
         format="number"
@@ -55,13 +55,13 @@
     <section class="card panel chart-panel">
       <div class="panel-head">
         <div>
-          <div class="panel-title">Динамика пользователей по сериям</div>
+          <div class="panel-title">KZ Total по top URL</div>
         </div>
       </div>
       <app-comparison-line-chart
         [labels]="labels"
-        [seriesA]="usersSeriesA"
-        [seriesB]="usersSeriesB"
+        [seriesA]="kzSeriesA"
+        [seriesB]="kzSeriesB"
         [nameA]="primaryLabel"
         [nameB]="secondaryLabel"
         format="number"

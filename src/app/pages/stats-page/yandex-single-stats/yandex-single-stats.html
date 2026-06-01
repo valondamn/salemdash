@@ -4,36 +4,48 @@
       <span class="eyebrow">Итоги Яндекс Метрики</span>
       <h2>{{ headline }}</h2>
     </div>
-    <div class="context-chip">Трафик серий</div>
+    <div class="context-chip">{{ projectName }}</div>
   </section>
 
   <section class="stats-grid yandex-stats-grid">
     <div class="stat card accent-emerald">
-      <div class="label">Пользователи</div>
-      <div class="value">{{ fmtCompact(users) }}</div>
-      <div class="hint muted">уникальные</div>
+      <div class="label">Total</div>
+      <div class="value">{{ fmtCompact(totalCount) }}</div>
+      <div class="hint muted">суммарно</div>
     </div>
 
     <div class="stat card accent-cyan">
-      <div class="label">Визиты</div>
-      <div class="value">{{ fmtCompact(visits) }}</div>
-      <div class="hint muted">всего</div>
+      <div class="label">KZ Total</div>
+      <div class="value">{{ fmtCompact(totalKzCount) }}</div>
+      <div class="hint muted">суммарно</div>
     </div>
 
     <div class="stat card accent-amber">
-      <div class="label">Визитов на пользователя</div>
-      <div class="value">{{ formatDecimal(visitsPerUser) }}</div>
-      <div class="hint muted">глубина визита</div>
+      <div class="label">URL</div>
+      <div class="value">{{ fmtCompact(urlCount) }}</div>
+      <div class="hint muted">источников</div>
+    </div>
+
+    <div class="stat card accent-blue">
+      <div class="label">Total / URL</div>
+      <div class="value">{{ formatDecimal(avgPerUrl) }}</div>
+      <div class="hint muted">среднее</div>
+    </div>
+
+    <div class="stat card accent-violet">
+      <div class="label">KZ / URL</div>
+      <div class="value">{{ formatDecimal(avgKzPerUrl) }}</div>
+      <div class="hint muted">среднее</div>
     </div>
   </section>
 
   <section class="card panel chart-panel">
     <div class="panel-head">
       <div>
-        <div class="panel-title">Визиты по сериям</div>
+        <div class="panel-title">Top Yandex URL</div>
       </div>
-      <div class="panel-tag">{{ slugLabel }}</div>
+      <div class="panel-tag">Top 12</div>
     </div>
-    <app-yandex-visits-chart [rows]="rows" [slug]="slug"></app-yandex-visits-chart>
+    <app-yandex-visits-chart [items]="items" [label]="projectName"></app-yandex-visits-chart>
   </section>
 </div>

@@ -16,7 +16,35 @@ export type Project = {
   id: number;
   name?: string;
   utm_name?: string;
+  youtube_channel_id?: number | null;
+  instagram_id?: number | null;
+  tiktok_id?: number | null;
+  aliaslist?: string[];
+  project_start_date?: string | null;
+  project_end_date?: string | null;
+  age?: string | null;
+  category?: string | null;
+  gender?: string | null;
+  genre?: string | null;
+  lang?: string | null;
+  is_serial?: boolean | null;
   [key: string]: any;
+};
+
+export type ProjectUpsertPayload = {
+  ProjectName: string;
+  YTChannelID: number | null;
+  InstagramId: number | null;
+  TikTokId: number | null;
+  aliaslist: string[];
+  ProjectStartDate: string | null;
+  ProjectEndDate: string | null;
+};
+
+export type ProjectAccountOption = {
+  id: number;
+  name: string;
+  url?: string;
 };
 
 export type EpisodeInfo = {
@@ -84,6 +112,68 @@ export type UnifiedVisitsRow = {
   youtube_comments: number;
 };
 
+export type YandexProjectUrlMetric = {
+  id: number;
+  project_id: number;
+  name: string;
+  count: number;
+  kz_count: number;
+  is_need: number;
+};
+
+export type YandexProjectAnalyticsApiResponse = {
+  Items?: Array<{
+    Count?: number | string;
+    ID?: number | string;
+    KZCount?: number | string;
+    Name?: string;
+    ProjectID?: number | string;
+    is_need?: number | string;
+  }>;
+  ProjectID?: number | string;
+  ProjectName?: string;
+  TotalCount?: number | string;
+  TotalKZCount?: number | string;
+  UrlCount?: number | string;
+};
+
+export type YandexProjectAnalytics = {
+  project_id: number;
+  project_name: string;
+  total_count: number;
+  total_kz_count: number;
+  url_count: number;
+  items: YandexProjectUrlMetric[];
+};
+
+export type YandexProjectsGroupItemApi = {
+  ProjectID?: number | string;
+  ProjectName?: string;
+  TotalCount?: number | string;
+  TotalKZCount?: number | string;
+  UrlCount?: number | string;
+};
+
+export type YandexProjectsGroupItem = {
+  project_id: number;
+  project_name: string;
+  total_count: number;
+  total_kz_count: number;
+  url_count: number;
+};
+
+export type YandexTotalApiResponse = {
+  TotalCount?: number | string;
+  TotalKZCount?: number | string;
+  UrlCount?: number | string;
+};
+
+export type YandexTotal = {
+  total_count: number;
+  total_kz_count: number;
+  url_count: number;
+};
+
 export type YoutubeChannelApiItem = {
   id: number;
   name: string;
@@ -146,6 +236,56 @@ export type InstagramAccount = {
   saved_total: number;
   views_day: number;
   views_total: number;
+};
+
+export type TikTokTotalApiResponse = {
+  accounts_count?: number | string;
+  total_comments?: number | string;
+  total_followers?: number | string;
+  total_likes?: number | string;
+  total_profile_likes?: number | string;
+  total_shares?: number | string;
+  total_videos?: number | string;
+  total_views?: number | string;
+};
+
+export type TikTokTotal = {
+  accounts_count: number;
+  total_comments: number;
+  total_followers: number;
+  total_likes: number;
+  total_profile_likes: number;
+  total_shares: number;
+  total_videos: number;
+  total_views: number;
+};
+
+export type TikTokAccountTotalsApiItem = {
+  account_id?: number | string;
+  channel_name?: string;
+  channel_url?: string;
+  followers?: number | string;
+  profile_likes?: number | string;
+  total_comments?: number | string;
+  total_likes?: number | string;
+  total_shares?: number | string;
+  total_videos?: number | string;
+  total_views?: number | string;
+  updated_at?: string;
+};
+
+export type TikTokAccountTotals = {
+  account_id: number;
+  channel_name: string;
+  channel_url: string;
+  followers: number;
+  profile_likes: number;
+  total_comments: number;
+  total_likes: number;
+  total_shares: number;
+  total_videos: number;
+  total_views: number;
+  updated_at: string;
 };
 
 export type ProjectInfoApiItem = {

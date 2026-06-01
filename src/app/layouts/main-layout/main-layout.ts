@@ -16,6 +16,7 @@ export class MainLayoutComponent {
   tabs: TabDef[] = [
     { label: 'Дашборд', to: '/dashboard', icon: '📊' },
     { label: 'Статистика', to: '/stats', icon: '📈' },
+    { label: 'Проекты', to: '/projects', icon: '🗂' },
     { label: 'Добавить релиз', to: '/add-release', icon: '+' },
     { label: 'Настройки', to: '/settings', icon: '⚙️' },
   ];
@@ -27,4 +28,3 @@ export class MainLayoutComponent {
     this.router.navigateByUrl('/login');
   }
 }
-

@@ -1,10 +1,15 @@
 import { ChangeDetectionStrategy, Component, OnInit, signal } from '@angular/core';
 import { NgFor, NgIf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { forkJoin } from 'rxjs';
 import {
+  TikTokAccountTotals,
+  TikTokTotal,
   Project,
   EpisodeInfo,
   YoutubeChannel,
+  YandexProjectsGroupItem,
+  YandexTotal,
   InstagramAccount,
 } from '../../shared/services/ssm-models';
 import { ProjectsApiService } from '../../shared/services/projects-api.service';
@@ -51,6 +56,25 @@ export class DashboardPageComponent implements OnInit {
   totalInstagramComments = 0;
   totalInstagramSaves = 0;
 
+  loadingYandex = signal(false);
+  yandexError = signal<string | null>(null);
+  yandexProjects = signal<YandexProjectsGroupItem[]>([]);
+  yandexTotal: YandexTotal = { total_count: 0, total_kz_count: 0, url_count: 0 };
+
+  loadingTikTok = signal(false);
+  tiktokError = signal<string | null>(null);
+  tiktokAccounts = signal<TikTokAccountTotals[]>([]);
+  tiktokTotal: TikTokTotal = {
+    accounts_count: 0,
+    total_comments: 0,
+    total_followers: 0,
+    total_likes: 0,
+    total_profile_likes: 0,
+    total_shares: 0,
+    total_videos: 0,
+    total_views: 0,
+  };
+
   constructor(
     private projectsApi: ProjectsApiService,
     private analyticsApi: AnalyticsApiService
@@ -60,6 +84,8 @@ export class DashboardPageComponent implements OnInit {
     this.loadProjects();
     this.loadYoutubeChannels();
     this.loadInstagramAccounts();
+    this.loadYandexTotals();
+    this.loadTikTokTotals();
   }
 
   get selectedProjectLabel() {
@@ -148,6 +174,15 @@ export class DashboardPageComponent implements OnInit {
     return username ? `https://www.instagram.com/${username}/` : '#';
   }
 
+  tiktokUrl(url: string) {
+    return url || '#';
+  }
+
+  avgPerUrl(total: number, count: number) {
+    if (!count) return 0;
+    return Math.round(total / count);
+  }
+
   toNum(v: any): number {
     return Number(v) || 0;
   }
@@ -198,6 +233,49 @@ export class DashboardPageComponent implements OnInit {
       error: (e: any) => {
         this.instagramError.set(e?.message ?? 'Не удалось загрузить данные по Instagram');
         this.loadingInstagram.set(false);
+      },
+    });
+  }
+
+  private loadYandexTotals(force = false) {
+    this.loadingYandex.set(true);
+    this.yandexError.set(null);
+
+    forkJoin({
+      total: this.analyticsApi.getYandexTotal(force),
+      projects: this.analyticsApi.getYandexProjects(force),
+    }).subscribe({
+      next: ({ total, projects }) => {
+        this.yandexTotal = total;
+        this.yandexProjects.set([...(projects ?? [])]
+          .sort((a, b) => b.total_count - a.total_count)
+          .slice(0, 10));
+        this.loadingYandex.set(false);
+      },
+      error: (e: any) => {
+        this.yandexError.set(e?.message ?? 'Не удалось загрузить данные Yandex');
+        this.loadingYandex.set(false);
+      },
+    });
+  }
+
+  private loadTikTokTotals(force = false) {
+    this.loadingTikTok.set(true);
+    this.tiktokError.set(null);
+
+    forkJoin({
+      total: this.analyticsApi.getTikTokTotal(force),
+      accounts: this.analyticsApi.getTikTokTotalsByAccount(force),
+    }).subscribe({
+      next: ({ total, accounts }) => {
+        this.tiktokTotal = total;
+        const items = [...(accounts ?? [])].sort((a, b) => b.total_views - a.total_views);
+        this.tiktokAccounts.set(items ?? []);
+        this.loadingTikTok.set(false);
+      },
+      error: (e: any) => {
+        this.tiktokError.set(e?.message ?? 'Не удалось загрузить данные TikTok');
+        this.loadingTikTok.set(false);
       },
     });
   }

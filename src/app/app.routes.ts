@@ -8,6 +8,7 @@ import { DashboardPageComponent } from './pages/dashboard-page/dashboard-page';
 import { StatsPageComponent } from './pages/stats-page/stats-page';
 import { SettingsPageComponent } from './pages/settings-page/settings-page';
 import { AddReleasePageComponent } from './pages/add-release-page/add-release-page';
+import { ProjectsPageComponent } from './pages/projects-page/projects-page';
 import { authGuard } from './shared/guards/auth-guard';
 
 export const routes: Routes = [
@@ -23,6 +24,7 @@ export const routes: Routes = [
     children: [
       { path: 'dashboard', component: DashboardPageComponent },
       { path: 'stats', component: StatsPageComponent },
+      { path: 'projects', component: ProjectsPageComponent },
       { path: 'settings', component: SettingsPageComponent },
       { path: 'add-release', component: AddReleasePageComponent },
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },

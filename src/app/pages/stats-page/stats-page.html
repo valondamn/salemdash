@@ -29,8 +29,8 @@
         <p class="muted">{{ getSourceDescription() }}</p>
       </div>
 
-      <button class="btn accent-btn" (click)="onRefresh()" [disabled]="loadingInfo">
-        {{ loadingInfo ? 'Обновляем...' : 'Обновить данные' }}
+      <button class="btn accent-btn" (click)="onRefresh()" [disabled]="currentLoading || loadingProjects">
+        {{ currentLoading || loadingProjects ? 'Обновляем...' : 'Обновить данные' }}
       </button>
     </div>
 
@@ -43,7 +43,7 @@
       <label class="control-item">
         <span class="control-label">Проект</span>
         <select class="select compact-select" [(ngModel)]="selectedProjectId" (change)="onProjectChange()">
-          <option value="" disabled>Выберите проект...</option>
+          <option value="" disabled>{{ loadingProjects ? 'Загружаем проекты...' : 'Выберите проект...' }}</option>
           <option *ngFor="let p of projects" [value]="p.id">
             {{ p.name || p.utm_name || ('Проект ' + p.id) }}
           </option>
@@ -55,7 +55,7 @@
       <label class="control-item">
         <span class="control-label">Проект A</span>
         <select class="select compact-select accent-a" [(ngModel)]="projectAId" (change)="onCompareProjectsChange()">
-          <option value="" disabled>Проект A...</option>
+          <option value="" disabled>{{ loadingProjects ? 'Загружаем проекты...' : 'Проект A...' }}</option>
           <option *ngFor="let p of projects" [value]="p.id">
             {{ p.name || p.utm_name || ('Проект ' + p.id) }}
           </option>
@@ -65,7 +65,7 @@
       <label class="control-item">
         <span class="control-label">Проект B</span>
         <select class="select compact-select accent-b" [(ngModel)]="projectBId" (change)="onCompareProjectsChange()">
-          <option value="" disabled>Проект B...</option>
+          <option value="" disabled>{{ loadingProjects ? 'Загружаем проекты...' : 'Проект B...' }}</option>
           <option *ngFor="let p of projects" [value]="p.id">
             {{ p.name || p.utm_name || ('Проект ' + p.id) }}
           </option>
@@ -76,9 +76,11 @@
     <div class="control-grid" *ngIf="activeSource === 'yandex' && mode === 'single'">
       <label class="control-item">
         <span class="control-label">Проект</span>
-        <select class="select compact-select" [(ngModel)]="selectedSlug" (change)="recalcYandex()">
-          <option value="" disabled>Выберите проект...</option>
-          <option *ngFor="let slug of projectSlugs" [value]="slug">{{ getSlugLabel(slug) }}</option>
+        <select class="select compact-select" [(ngModel)]="yandexProjectId" (change)="onYandexProjectChange()">
+          <option value="" disabled>{{ loadingProjects ? 'Загружаем проекты...' : 'Выберите проект...' }}</option>
+          <option *ngFor="let p of projects" [value]="p.id">
+            {{ p.name || p.utm_name || ('Проект ' + p.id) }}
+          </option>
         </select>
       </label>
     </div>
@@ -86,17 +88,21 @@
     <div class="control-grid compare-grid" *ngIf="activeSource === 'yandex' && mode === 'compare'">
       <label class="control-item">
         <span class="control-label">Проект A</span>
-        <select class="select compact-select accent-a" [(ngModel)]="slugA" (change)="onCompareSlugsChange()">
-          <option value="" disabled>Проект A...</option>
-          <option *ngFor="let slug of projectSlugs" [value]="slug">{{ getSlugLabel(slug) }}</option>
+        <select class="select compact-select accent-a" [(ngModel)]="yandexProjectAId" (change)="onCompareYandexProjectsChange()">
+          <option value="" disabled>{{ loadingProjects ? 'Загружаем проекты...' : 'Проект A...' }}</option>
+          <option *ngFor="let p of projects" [value]="p.id">
+            {{ p.name || p.utm_name || ('Проект ' + p.id) }}
+          </option>
         </select>
       </label>
 
       <label class="control-item">
         <span class="control-label">Проект B</span>
-        <select class="select compact-select accent-b" [(ngModel)]="slugB" (change)="onCompareSlugsChange()">
-          <option value="" disabled>Проект B...</option>
-          <option *ngFor="let slug of projectSlugs" [value]="slug">{{ getSlugLabel(slug) }}</option>
+        <select class="select compact-select accent-b" [(ngModel)]="yandexProjectBId" (change)="onCompareYandexProjectsChange()">
+          <option value="" disabled>{{ loadingProjects ? 'Загружаем проекты...' : 'Проект B...' }}</option>
+          <option *ngFor="let p of projects" [value]="p.id">
+            {{ p.name || p.utm_name || ('Проект ' + p.id) }}
+          </option>
         </select>
       </label>
     </div>
@@ -138,7 +144,7 @@
 
   <div class="errbox" *ngIf="error">{{ error }}</div>
 
-  <section class="sync-banner card" *ngIf="loadingInfo">
+  <section class="sync-banner card" *ngIf="currentLoading || loadingProjects">
     <div class="sync-banner__dot"></div>
     <div>
       <div class="sync-banner__title">Данные обновляются</div>
@@ -158,6 +164,7 @@
     class="analytics-empty card"
     *ngIf="
       !loadingInfo &&
+      !loadingProjects &&
       (
         (activeSource === 'youtube' && mode === 'single' && !hasYoutubeSingleData) ||
         (activeSource === 'youtube' && mode === 'compare' && !hasYoutubeCompareData) ||
@@ -199,22 +206,21 @@
   <app-yandex-single-stats
     *ngIf="activeSource === 'yandex' && mode === 'single' && hasYandexData"
     [headline]="getSingleHeadline()"
-    [slugLabel]="getSlugLabel(selectedSlug)"
-    [users]="yandexUsers"
-    [visits]="yandexVisits"
-    [visitsPerUser]="yandexVisitsPerUser"
-    [rows]="visitsRows"
-    [slug]="selectedSlug"
+    [projectName]="yandexSingle?.project_name || ''"
+    [totalCount]="yandexSingle?.total_count || 0"
+    [totalKzCount]="yandexSingle?.total_kz_count || 0"
+    [urlCount]="yandexSingle?.url_count || 0"
+    [items]="yandexSingle?.items || []"
   ></app-yandex-single-stats>
 
   <app-yandex-compare-stats
     *ngIf="activeSource === 'yandex' && mode === 'compare' && hasYandexData"
     [rows]="yandexCompareRows"
     [labels]="yandexCompareLabels"
-    [visitsSeriesA]="yandexVisitsSeriesA"
-    [visitsSeriesB]="yandexVisitsSeriesB"
-    [usersSeriesA]="yandexUsersSeriesA"
-    [usersSeriesB]="yandexUsersSeriesB"
+    [totalSeriesA]="yandexTotalSeriesA"
+    [totalSeriesB]="yandexTotalSeriesB"
+    [kzSeriesA]="yandexKzSeriesA"
+    [kzSeriesB]="yandexKzSeriesB"
     [primaryLabel]="getComparePrimaryLabel()"
     [secondaryLabel]="getCompareSecondaryLabel()"
     [summary]="getCompareSummary(yandexCompareRows, getComparePrimaryLabel(), getCompareSecondaryLabel())"

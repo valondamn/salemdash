@@ -15,10 +15,10 @@ import { CompareMetricRow } from '../stats.models';
 export class YandexCompareStatsComponent {
   @Input({ required: true }) rows: CompareMetricRow[] = [];
   @Input({ required: true }) labels: string[] = [];
-  @Input({ required: true }) visitsSeriesA: Array<number | null> = [];
-  @Input({ required: true }) visitsSeriesB: Array<number | null> = [];
-  @Input({ required: true }) usersSeriesA: Array<number | null> = [];
-  @Input({ required: true }) usersSeriesB: Array<number | null> = [];
+  @Input({ required: true }) totalSeriesA: Array<number | null> = [];
+  @Input({ required: true }) totalSeriesB: Array<number | null> = [];
+  @Input({ required: true }) kzSeriesA: Array<number | null> = [];
+  @Input({ required: true }) kzSeriesB: Array<number | null> = [];
   @Input({ required: true }) primaryLabel = '';
   @Input({ required: true }) secondaryLabel = '';
   @Input({ required: true }) summary = '';

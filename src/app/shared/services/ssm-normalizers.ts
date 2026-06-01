@@ -4,8 +4,20 @@ import {
   InstagramAccountApiItem,
   ProjectInfoApiItem,
   ProjectInfoApiResponse,
+  Project,
+  ProjectAccountOption,
+  TikTokAccountTotals,
+  TikTokAccountTotalsApiItem,
+  TikTokTotal,
+  TikTokTotalApiResponse,
   UnifiedVisitsRow,
   VisitsResponse,
+  YandexProjectAnalytics,
+  YandexProjectAnalyticsApiResponse,
+  YandexProjectsGroupItem,
+  YandexProjectsGroupItemApi,
+  YandexTotal,
+  YandexTotalApiResponse,
   YoutubeChannel,
   YoutubeChannelApiItem,
 } from './ssm-models';
@@ -58,6 +70,29 @@ export function normalizeProjectInfo(resp: EpisodeInfo[] | ProjectInfoApiRespons
   return items.map((item) => normalizeProjectInfoItem(item));
 }
 
+export function normalizeProject(project: Project): Project {
+  return {
+    ...project,
+    id: pickNumber(project.id) ?? 0,
+    name: pickString(project.name) ?? '',
+    utm_name: pickString(project.utm_name),
+    youtube_channel_id: pickNumber(project.youtube_channel_id) ?? null,
+    instagram_id: pickNumber(project.instagram_id) ?? null,
+    tiktok_id: pickNumber(project.tiktok_id) ?? null,
+    aliaslist: Array.isArray(project.aliaslist)
+      ? project.aliaslist.map((item) => String(item).trim()).filter(Boolean)
+      : [],
+    project_start_date: pickString(project.project_start_date) ?? null,
+    project_end_date: pickString(project.project_end_date) ?? null,
+    age: pickString(project.age) ?? null,
+    category: pickString(project.category) ?? null,
+    gender: pickString(project.gender) ?? null,
+    genre: pickString(project.genre) ?? null,
+    lang: pickString(project.lang) ?? null,
+    is_serial: typeof project.is_serial === 'boolean' ? project.is_serial : project.is_serial == null ? null : Boolean(project.is_serial),
+  };
+}
+
 export function normalizeYoutubeChannel(item: YoutubeChannelApiItem): YoutubeChannel {
   return {
     id: Number(item.id) || 0,
@@ -91,6 +126,81 @@ export function normalizeInstagramAccount(item: InstagramAccountApiItem): Instag
     views_day: pickNumber(item.Instagram_Views_Day) ?? 0,
     views_total: pickNumber(item.Instagram_Views_Total) ?? 0,
   };
+}
+
+export function normalizeAccountOption(item: any): ProjectAccountOption {
+  return {
+    id: pickNumber(item?.id, item?.ID) ?? 0,
+    name: pickString(item?.name, item?.Name) ?? 'Unnamed',
+    url: pickString(item?.url, item?.URL),
+  };
+}
+
+export function normalizeYandexProjectAnalytics(resp: YandexProjectAnalyticsApiResponse): YandexProjectAnalytics {
+  const items = Array.isArray(resp?.Items) ? resp.Items : [];
+
+  return {
+    project_id: pickNumber(resp.ProjectID) ?? 0,
+    project_name: pickString(resp.ProjectName) ?? 'Проект',
+    total_count: pickNumber(resp.TotalCount) ?? 0,
+    total_kz_count: pickNumber(resp.TotalKZCount) ?? 0,
+    url_count: pickNumber(resp.UrlCount) ?? items.length,
+    items: items.map((item) => ({
+      id: pickNumber(item.ID) ?? 0,
+      project_id: pickNumber(item.ProjectID) ?? 0,
+      name: pickString(item.Name) ?? 'Источник',
+      count: pickNumber(item.Count) ?? 0,
+      kz_count: pickNumber(item.KZCount) ?? 0,
+      is_need: pickNumber(item.is_need) ?? 0,
+    })),
+  };
+}
+
+export function normalizeYandexProjectsGroup(items: YandexProjectsGroupItemApi[] | null | undefined): YandexProjectsGroupItem[] {
+  return (items ?? []).map((item) => ({
+    project_id: pickNumber(item.ProjectID) ?? 0,
+    project_name: pickString(item.ProjectName) ?? 'Проект',
+    total_count: pickNumber(item.TotalCount) ?? 0,
+    total_kz_count: pickNumber(item.TotalKZCount) ?? 0,
+    url_count: pickNumber(item.UrlCount) ?? 0,
+  }));
+}
+
+export function normalizeYandexTotal(resp: YandexTotalApiResponse): YandexTotal {
+  return {
+    total_count: pickNumber(resp.TotalCount) ?? 0,
+    total_kz_count: pickNumber(resp.TotalKZCount) ?? 0,
+    url_count: pickNumber(resp.UrlCount) ?? 0,
+  };
+}
+
+export function normalizeTikTokTotal(resp: TikTokTotalApiResponse): TikTokTotal {
+  return {
+    accounts_count: pickNumber(resp.accounts_count) ?? 0,
+    total_comments: pickNumber(resp.total_comments) ?? 0,
+    total_followers: pickNumber(resp.total_followers) ?? 0,
+    total_likes: pickNumber(resp.total_likes) ?? 0,
+    total_profile_likes: pickNumber(resp.total_profile_likes) ?? 0,
+    total_shares: pickNumber(resp.total_shares) ?? 0,
+    total_videos: pickNumber(resp.total_videos) ?? 0,
+    total_views: pickNumber(resp.total_views) ?? 0,
+  };
+}
+
+export function normalizeTikTokAccountTotals(items: TikTokAccountTotalsApiItem[] | null | undefined): TikTokAccountTotals[] {
+  return (items ?? []).map((item) => ({
+    account_id: pickNumber(item.account_id) ?? 0,
+    channel_name: pickString(item.channel_name) ?? 'TikTok',
+    channel_url: pickString(item.channel_url) ?? '',
+    followers: pickNumber(item.followers) ?? 0,
+    profile_likes: pickNumber(item.profile_likes) ?? 0,
+    total_comments: pickNumber(item.total_comments) ?? 0,
+    total_likes: pickNumber(item.total_likes) ?? 0,
+    total_shares: pickNumber(item.total_shares) ?? 0,
+    total_videos: pickNumber(item.total_videos) ?? 0,
+    total_views: pickNumber(item.total_views) ?? 0,
+    updated_at: pickString(item.updated_at) ?? '',
+  }));
 }
 
 export function normalizeVisits(resp: VisitsResponse): UnifiedVisitsRow[] {

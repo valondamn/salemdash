@@ -1,4 +1,4 @@
-import { EpisodeInfo, InstagramAccount, UnifiedVisitsRow } from '../../shared/services/ssm-models';
+import { EpisodeInfo, InstagramAccount, YandexProjectAnalytics, YandexProjectUrlMetric } from '../../shared/services/ssm-models';
 
 export type Mode = 'single' | 'compare';
 export type Source = 'youtube' | 'yandex' | 'instagram';
@@ -43,21 +43,20 @@ export type YoutubeCompareStatsInputs = {
 
 export type YandexSingleStatsInputs = {
   headline: string;
-  slugLabel: string;
-  users: number;
-  visits: number;
-  visitsPerUser: number;
-  rows: UnifiedVisitsRow[];
-  slug: string;
+  totalCount: number;
+  totalKzCount: number;
+  urlCount: number;
+  items: YandexProjectUrlMetric[];
+  projectName: string;
 };
 
 export type YandexCompareStatsInputs = {
   rows: CompareMetricRow[];
   labels: string[];
-  visitsSeriesA: Array<number | null>;
-  visitsSeriesB: Array<number | null>;
-  usersSeriesA: Array<number | null>;
-  usersSeriesB: Array<number | null>;
+  totalSeriesA: Array<number | null>;
+  totalSeriesB: Array<number | null>;
+  kzSeriesA: Array<number | null>;
+  kzSeriesB: Array<number | null>;
   primaryLabel: string;
   secondaryLabel: string;
   summary: string;

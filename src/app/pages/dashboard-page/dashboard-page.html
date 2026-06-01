@@ -264,4 +264,143 @@
       </div>
     </div>
   </section>
+
+  <div class="dashboard-page__notice" *ngIf="yandexError()">{{ yandexError() }}</div>
+
+  <section class="dashboard-page__panel card">
+    <div class="dashboard-page__panel-head">
+      <div>
+        <div class="dashboard-page__panel-title">Общие данные по Yandex</div>
+        <p class="dashboard-page__panel-copy">Total по всем url и топ проектов по сумме трафика.</p>
+      </div>
+      <div class="dashboard-page__muted" *ngIf="loadingYandex()">Загружаем итоги...</div>
+    </div>
+
+    <section class="dashboard-page__stats dashboard-page__stats--channels">
+      <div class="dashboard-page__stat card">
+        <div class="dashboard-page__label">URL</div>
+        <div class="dashboard-page__value">{{ fmt(yandexTotal.url_count) }}</div>
+        <div class="dashboard-page__hint">всего</div>
+      </div>
+
+      <div class="dashboard-page__stat card">
+        <div class="dashboard-page__label">Total</div>
+        <div class="dashboard-page__value">{{ fmt(yandexTotal.total_count) }}</div>
+        <div class="dashboard-page__hint">по всем url</div>
+      </div>
+
+      <div class="dashboard-page__stat card">
+        <div class="dashboard-page__label">KZ Total</div>
+        <div class="dashboard-page__value">{{ fmt(yandexTotal.total_kz_count) }}</div>
+        <div class="dashboard-page__hint">по всем url</div>
+      </div>
+    </section>
+
+    <div class="dashboard-page__loading-table" *ngIf="loadingYandex() && !yandexProjects().length">
+      <div class="dashboard-page__loading-row" *ngFor="let _ of [1, 2, 3, 4]"></div>
+    </div>
+
+    <div class="dashboard-page__empty" *ngIf="!loadingYandex() && !yandexProjects().length">
+      Данные по Yandex пока не пришли из API.
+    </div>
+
+    <div class="dashboard-page__table dashboard-page__table--channels" *ngIf="yandexProjects().length">
+      <div class="dashboard-page__row dashboard-page__row--head dashboard-page__row--channels">
+        <div>Проект</div>
+        <div>URL</div>
+        <div>Total</div>
+        <div>KZ Total</div>
+        <div>Среднее / URL</div>
+        <div>KZ / URL</div>
+      </div>
+
+      <div class="dashboard-page__row dashboard-page__row--channels" *ngFor="let item of yandexProjects()">
+        <div class="dashboard-page__episode">{{ item.project_name }}</div>
+        <div>{{ fmt(item.url_count) }}</div>
+        <div>{{ fmt(item.total_count) }}</div>
+        <div>{{ fmt(item.total_kz_count) }}</div>
+        <div>{{ fmt(avgPerUrl(item.total_count, item.url_count)) }}</div>
+        <div>{{ fmt(avgPerUrl(item.total_kz_count, item.url_count)) }}</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="dashboard-page__notice" *ngIf="tiktokError()">{{ tiktokError() }}</div>
+
+  <section class="dashboard-page__panel card">
+    <div class="dashboard-page__panel-head">
+      <div>
+        <div class="dashboard-page__panel-title">Общие данные по TikTok</div>
+        <p class="dashboard-page__panel-copy">Total по TikTok и группировка по аккаунтам.</p>
+      </div>
+      <div class="dashboard-page__muted" *ngIf="loadingTikTok()">Загружаем итоги...</div>
+    </div>
+
+    <section class="dashboard-page__stats dashboard-page__stats--instagram">
+      <div class="dashboard-page__stat card">
+        <div class="dashboard-page__label">Аккаунты</div>
+        <div class="dashboard-page__value">{{ fmt(tiktokTotal.accounts_count) }}</div>
+        <div class="dashboard-page__hint">в total</div>
+      </div>
+      <div class="dashboard-page__stat card">
+        <div class="dashboard-page__label">Подписчики</div>
+        <div class="dashboard-page__value">{{ fmt(tiktokTotal.total_followers) }}</div>
+        <div class="dashboard-page__hint">суммарно</div>
+      </div>
+      <div class="dashboard-page__stat card">
+        <div class="dashboard-page__label">Просмотры</div>
+        <div class="dashboard-page__value">{{ fmt(tiktokTotal.total_views) }}</div>
+        <div class="dashboard-page__hint">суммарно</div>
+      </div>
+      <div class="dashboard-page__stat card">
+        <div class="dashboard-page__label">Лайки</div>
+        <div class="dashboard-page__value">{{ fmt(tiktokTotal.total_likes) }}</div>
+        <div class="dashboard-page__hint">по видео</div>
+      </div>
+      <div class="dashboard-page__stat card">
+        <div class="dashboard-page__label">Шеры</div>
+        <div class="dashboard-page__value">{{ fmt(tiktokTotal.total_shares) }}</div>
+        <div class="dashboard-page__hint">суммарно</div>
+      </div>
+      <div class="dashboard-page__stat card">
+        <div class="dashboard-page__label">Профиль лайки</div>
+        <div class="dashboard-page__value">{{ fmt(tiktokTotal.total_profile_likes) }}</div>
+        <div class="dashboard-page__hint">на аккаунтах</div>
+      </div>
+    </section>
+
+    <div class="dashboard-page__loading-table" *ngIf="loadingTikTok() && !tiktokAccounts().length">
+      <div class="dashboard-page__loading-row" *ngFor="let _ of [1, 2, 3, 4]"></div>
+    </div>
+
+    <div class="dashboard-page__empty" *ngIf="!loadingTikTok() && !tiktokAccounts().length">
+      Данные по TikTok пока не пришли из API.
+    </div>
+
+    <div class="dashboard-page__table dashboard-page__table--instagram" *ngIf="tiktokAccounts().length">
+      <div class="dashboard-page__row dashboard-page__row--head dashboard-page__row--instagram">
+        <div>Аккаунт</div>
+        <div>Подписчики</div>
+        <div>Видео</div>
+        <div>Просмотры</div>
+        <div>Лайки</div>
+        <div>Шеры</div>
+        <div>Обновлено</div>
+      </div>
+
+      <div class="dashboard-page__row dashboard-page__row--instagram" *ngFor="let account of tiktokAccounts()">
+        <div class="dashboard-page__episode">
+          <a class="dashboard-page__channel-link" [href]="tiktokUrl(account.channel_url)" target="_blank" rel="noreferrer">
+            {{ account.channel_name }}
+          </a>
+        </div>
+        <div>{{ fmt(account.followers) }}</div>
+        <div>{{ fmt(account.total_videos) }}</div>
+        <div>{{ fmt(account.total_views) }}</div>
+        <div>{{ fmt(account.total_likes) }}</div>
+        <div>{{ fmt(account.total_shares) }}</div>
+        <div>{{ account.updated_at || '—' }}</div>
+      </div>
+    </div>
+  </section>
 </div>

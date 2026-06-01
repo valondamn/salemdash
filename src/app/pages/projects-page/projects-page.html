@@ -1,0 +1,255 @@
+<div class="projects-page" [class.projects-page--editor-open]="editorOpen">
+  <header class="projects-toolbar">
+    <div class="projects-toolbar__title">
+      <h1>Проекты</h1>
+      <span>{{ filteredProjects.length }} из {{ projects().length }}</span>
+    </div>
+
+    <div class="projects-toolbar__stats">
+      <div class="projects-stat">
+        <span>YT</span>
+        <strong>{{ linkedYoutubeCount }}</strong>
+      </div>
+      <div class="projects-stat">
+        <span>IG</span>
+        <strong>{{ linkedInstagramCount }}</strong>
+      </div>
+      <div class="projects-stat">
+        <span>TT</span>
+        <strong>{{ linkedTikTokCount }}</strong>
+      </div>
+      <div class="projects-stat projects-stat--warn">
+        <span>Пробелы</span>
+        <strong>{{ missingLinksCount }}</strong>
+      </div>
+    </div>
+
+    <div class="projects-toolbar__actions">
+      <button class="projects-btn projects-btn--ghost" type="button" (click)="loadAll(true)" [disabled]="loading()">
+        {{ loading() ? 'Обновляем' : 'Обновить' }}
+      </button>
+      <button class="projects-btn projects-btn--primary" type="button" (click)="startCreate()">
+        + Новый проект
+      </button>
+    </div>
+  </header>
+
+  <div class="projects-page__notice" *ngIf="error()">
+    {{ error() }}
+  </div>
+
+  <section class="projects-console">
+    <div class="projects-console__head">
+      <label class="projects-search">
+        <span>Поиск</span>
+        <input
+          type="search"
+          [(ngModel)]="query"
+          placeholder="Название, ID, UTM или алиас"
+        />
+      </label>
+
+      <div class="projects-filters" aria-label="Фильтр проектов">
+        <button
+          type="button"
+          *ngFor="let filter of filters; trackBy: trackByFilter"
+          [class.active]="activeFilter === filter.key"
+          (click)="setFilter(filter.key)"
+        >
+          {{ filter.label }}
+        </button>
+      </div>
+    </div>
+
+    <div class="projects-loading" *ngIf="loading() && !projects().length">
+      <div class="projects-loading__row" *ngFor="let _ of [1, 2, 3, 4, 5, 6]"></div>
+    </div>
+
+    <div class="projects-empty" *ngIf="!loading() && !projects().length">
+      <strong>Проекты не загрузились</strong>
+      <span>Проверьте API или обновите список ещё раз.</span>
+    </div>
+
+    <div class="projects-empty" *ngIf="!loading() && projects().length && !filteredProjects.length">
+      <strong>Ничего не найдено</strong>
+      <span>Попробуйте убрать фильтр или изменить поиск.</span>
+    </div>
+
+    <div class="projects-list" *ngIf="filteredProjects.length">
+      <article class="project-row" *ngFor="let project of filteredProjects; trackBy: trackByProject">
+        <div class="project-row__identity">
+          <div class="project-row__name">{{ projectTitle(project) }}</div>
+          <div class="project-row__meta">
+            <span>ID {{ project.id }}</span>
+            <span *ngIf="project.utm_name">{{ project.utm_name }}</span>
+            <span>{{ projectTypeLabel(project) }}</span>
+          </div>
+        </div>
+
+        <div class="project-row__connections">
+          <div class="connection-pill" [class.connected]="connectionTone(project.youtube_channel_id) === 'connected'">
+            <span>YT</span>
+            <strong>{{ accountLabel('youtube', project.youtube_channel_id) }}</strong>
+          </div>
+          <div class="connection-pill" [class.connected]="connectionTone(project.instagram_id) === 'connected'">
+            <span>IG</span>
+            <strong>{{ accountLabel('instagram', project.instagram_id) }}</strong>
+          </div>
+          <div class="connection-pill" [class.connected]="connectionTone(project.tiktok_id) === 'connected'">
+            <span>TT</span>
+            <strong>{{ accountLabel('tiktok', project.tiktok_id) }}</strong>
+          </div>
+        </div>
+
+        <div class="project-row__details">
+          <span>{{ dateRange(project) }}</span>
+          <span *ngIf="project.category || project.genre">
+            {{ project.category || 'Категория не указана' }}{{ project.genre ? ' / ' + project.genre : '' }}
+          </span>
+          <span *ngIf="project.lang || project.age">
+            {{ project.lang || 'Язык не указан' }}{{ project.age ? ' / ' + project.age : '' }}
+          </span>
+        </div>
+
+        <div class="project-row__aliases">
+          <span class="alias-chip" *ngFor="let alias of aliasList(project).slice(0, 4); trackBy: trackByAlias">
+            {{ alias }}
+          </span>
+          <span class="alias-chip alias-chip--muted" *ngIf="aliasList(project).length > 4">
+            +{{ aliasList(project).length - 4 }}
+          </span>
+          <span class="project-row__empty-alias" *ngIf="!aliasList(project).length">
+            Алиасы не указаны
+          </span>
+        </div>
+
+        <button class="projects-btn projects-btn--row" type="button" (click)="editProject(project)">
+          Изменить
+        </button>
+      </article>
+    </div>
+  </section>
+
+  <div class="project-editor-backdrop" *ngIf="editorOpen" (click)="closeEditor()"></div>
+
+  <aside class="project-editor" *ngIf="editorOpen">
+    <form class="project-editor__form" [formGroup]="form" (ngSubmit)="saveProject()">
+      <header class="project-editor__head">
+        <div>
+          <span class="project-editor__eyebrow">
+            {{ isEditing ? 'Редактирование' : 'Создание' }}
+          </span>
+          <h2>{{ isEditing ? projectTitle(selectedProject()!) : 'Новый проект' }}</h2>
+        </div>
+
+        <button class="project-editor__close" type="button" (click)="closeEditor()" aria-label="Закрыть">
+          ×
+        </button>
+      </header>
+
+      <div class="project-editor__body">
+        <section class="form-section">
+          <div class="form-section__title">Основное</div>
+          <div class="form-grid">
+            <label class="project-field project-field--wide">
+              <span>Название проекта</span>
+              <input type="text" formControlName="name" placeholder="Например, Sheker" />
+              <small *ngIf="form.controls.name.touched && form.controls.name.invalid">Поле обязательно</small>
+            </label>
+          </div>
+        </section>
+
+        <section class="form-section form-section--readonly" *ngIf="isEditing && selectedProject() as openedProject">
+          <div class="form-section__title">Информация из проекта</div>
+          <div class="project-meta-grid" *ngIf="projectMetaItems(openedProject).length; else noProjectMeta">
+            <div class="project-meta-item" *ngFor="let item of projectMetaItems(openedProject)">
+              <span>{{ item.label }}</span>
+              <strong>{{ item.value }}</strong>
+            </div>
+          </div>
+
+          <ng-template #noProjectMeta>
+            <div class="project-meta-empty">Дополнительные поля в проекте не заполнены.</div>
+          </ng-template>
+        </section>
+
+        <section class="form-section">
+          <div class="form-section__title">Аккаунты</div>
+          <div class="form-grid">
+            <label class="project-field project-field--wide">
+              <span>YouTube канал</span>
+              <select formControlName="youtube_channel_id">
+                <option value="">Не выбран</option>
+                <option *ngFor="let option of youtubeChannels(); trackBy: trackByOption" [value]="option.id">
+                  {{ option.name }}
+                </option>
+              </select>
+            </label>
+
+            <label class="project-field">
+              <span>Instagram</span>
+              <select formControlName="instagram_id">
+                <option value="">Не выбран</option>
+                <option *ngFor="let option of instagramAccounts(); trackBy: trackByOption" [value]="option.id">
+                  {{ option.name }}
+                </option>
+              </select>
+            </label>
+
+            <label class="project-field">
+              <span>TikTok</span>
+              <select formControlName="tiktok_id">
+                <option value="">Не выбран</option>
+                <option *ngFor="let option of tiktokAccounts(); trackBy: trackByOption" [value]="option.id">
+                  {{ option.name }}
+                </option>
+              </select>
+            </label>
+          </div>
+        </section>
+
+        <section class="form-section">
+          <div class="form-section__title">Алиасы</div>
+          <label class="project-field">
+            <span>Через запятую</span>
+            <input type="text" formControlName="aliases" placeholder="sheker, шейкер, шекер, shaker" />
+          </label>
+
+          <div class="alias-preview" *ngIf="formAliasPreview.length; else noAliases">
+            <span class="alias-chip" *ngFor="let alias of formAliasPreview; trackBy: trackByAlias">
+              {{ alias }}
+            </span>
+          </div>
+
+          <ng-template #noAliases>
+            <div class="alias-preview alias-preview--empty">Алиасы появятся здесь</div>
+          </ng-template>
+        </section>
+
+        <section class="form-section">
+          <div class="form-section__title">Период</div>
+          <div class="form-grid">
+            <label class="project-field">
+              <span>Дата старта</span>
+              <input type="date" formControlName="project_start_date" />
+            </label>
+
+            <label class="project-field">
+              <span>Дата окончания</span>
+              <input type="date" formControlName="project_end_date" />
+            </label>
+          </div>
+        </section>
+      </div>
+
+      <footer class="project-editor__foot">
+        <button class="projects-btn projects-btn--ghost" type="button" (click)="cancelEdit()">
+          Отменить
+        </button>
+        <button class="projects-btn projects-btn--primary" type="submit" [disabled]="saving() || loading()">
+          {{ saving() ? 'Сохраняем' : (isEditing ? 'Сохранить изменения' : 'Создать проект') }}
+        </button>
+      </footer>
+    </form>
+  </aside>
+</div>

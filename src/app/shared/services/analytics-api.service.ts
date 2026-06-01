@@ -5,12 +5,22 @@ import { Observable, map, shareReplay } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   InstagramAccountApiItem,
+  TikTokAccountTotalsApiItem,
+  TikTokTotalApiResponse,
   VisitsResponse,
+  YandexProjectAnalyticsApiResponse,
+  YandexProjectsGroupItemApi,
+  YandexTotalApiResponse,
   YoutubeChannelApiItem,
 } from './ssm-models';
 import {
   normalizeInstagramAccount,
+  normalizeTikTokAccountTotals,
+  normalizeTikTokTotal,
   normalizeVisits,
+  normalizeYandexProjectAnalytics,
+  normalizeYandexProjectsGroup,
+  normalizeYandexTotal,
   normalizeYoutubeChannel,
 } from './ssm-normalizers';
 
@@ -21,6 +31,11 @@ export class AnalyticsApiService {
   private normalizedVisits$?: Observable<ReturnType<typeof normalizeVisits>>;
   private youtubeChannels$?: Observable<ReturnType<typeof this.buildYoutubeChannels>>;
   private instagramAccounts$?: Observable<ReturnType<typeof this.buildInstagramAccounts>>;
+  private yandexProjects$?: Observable<ReturnType<typeof normalizeYandexProjectsGroup>>;
+  private yandexTotal$?: Observable<ReturnType<typeof normalizeYandexTotal>>;
+  private readonly yandexByProjectCache = new Map<number, Observable<ReturnType<typeof normalizeYandexProjectAnalytics>>>();
+  private tiktokTotal$?: Observable<ReturnType<typeof normalizeTikTokTotal>>;
+  private tiktokTotalsByAccount$?: Observable<ReturnType<typeof normalizeTikTokAccountTotals>>;
 
   constructor(private readonly http: HttpClient) {}
 
@@ -67,6 +82,74 @@ export class AnalyticsApiService {
     }
 
     return this.instagramAccounts$;
+  }
+
+  getYandexProjects(force = false) {
+    if (!this.yandexProjects$ || force) {
+      this.yandexProjects$ = this.http
+        .get<YandexProjectsGroupItemApi[]>(`${this.baseUrl}/ssm/yandex_projects`)
+        .pipe(
+          map((items) => normalizeYandexProjectsGroup(items)),
+          shareReplay(1)
+        );
+    }
+
+    return this.yandexProjects$;
+  }
+
+  getYandexTotal(force = false) {
+    if (!this.yandexTotal$ || force) {
+      this.yandexTotal$ = this.http
+        .get<YandexTotalApiResponse>(`${this.baseUrl}/ssm/yandex_total`)
+        .pipe(
+          map((response) => normalizeYandexTotal(response)),
+          shareReplay(1)
+        );
+    }
+
+    return this.yandexTotal$;
+  }
+
+  getYandexByProjectId(projectId: number, force = false) {
+    const cached = this.yandexByProjectCache.get(projectId);
+    if (!cached || force) {
+      const request$ = this.http
+        .get<YandexProjectAnalyticsApiResponse>(`${this.baseUrl}/ssm/yandex_byprojectid=${projectId}`)
+        .pipe(
+          map((response) => normalizeYandexProjectAnalytics(response)),
+          shareReplay(1)
+        );
+
+      this.yandexByProjectCache.set(projectId, request$);
+    }
+
+    return this.yandexByProjectCache.get(projectId)!;
+  }
+
+  getTikTokTotal(force = false) {
+    if (!this.tiktokTotal$ || force) {
+      this.tiktokTotal$ = this.http
+        .get<TikTokTotalApiResponse>(`${this.baseUrl}/ssm/tiktok_total`)
+        .pipe(
+          map((response) => normalizeTikTokTotal(response)),
+          shareReplay(1)
+        );
+    }
+
+    return this.tiktokTotal$;
+  }
+
+  getTikTokTotalsByAccount(force = false) {
+    if (!this.tiktokTotalsByAccount$ || force) {
+      this.tiktokTotalsByAccount$ = this.http
+        .get<TikTokAccountTotalsApiItem[]>(`${this.baseUrl}/ssm/tiktok_totals_by_account`)
+        .pipe(
+          map((items) => normalizeTikTokAccountTotals(items)),
+          shareReplay(1)
+        );
+    }
+
+    return this.tiktokTotalsByAccount$;
   }
 
   private buildYoutubeChannels(items: YoutubeChannelApiItem[] | null | undefined) {

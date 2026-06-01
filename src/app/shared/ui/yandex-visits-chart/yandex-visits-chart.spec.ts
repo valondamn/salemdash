@@ -1,20 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { YandexVisitsChart } from './yandex-visits-chart';
+import { YandexVisitsChartComponent } from './yandex-visits-chart';
 
-describe('YandexVisitsChart', () => {
-  let component: YandexVisitsChart;
-  let fixture: ComponentFixture<YandexVisitsChart>;
+describe('YandexVisitsChartComponent', () => {
+  let component: YandexVisitsChartComponent;
+  let fixture: ComponentFixture<YandexVisitsChartComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [YandexVisitsChart]
-    })
-    .compileComponents();
+      imports: [YandexVisitsChartComponent],
+    }).compileComponents();
 
-    fixture = TestBed.createComponent(YandexVisitsChart);
+    fixture = TestBed.createComponent(YandexVisitsChartComponent);
     component = fixture.componentInstance;
-    await fixture.whenStable();
   });
 
   it('should create', () => {

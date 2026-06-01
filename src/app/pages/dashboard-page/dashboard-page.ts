@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, signal, computed } from '@angular/core';
 import { NgFor, NgIf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { CountUpDirective } from '../../shared/directives/count-up.directive';
 import { forkJoin } from 'rxjs';
 import {
   TikTokAccountTotals,
@@ -18,7 +19,7 @@ import { AnalyticsApiService } from '../../shared/services/analytics-api.service
 @Component({
   selector: 'app-dashboard-page',
   standalone: true,
-  imports: [NgFor, NgIf, FormsModule],
+  imports: [NgFor, NgIf, FormsModule, CountUpDirective],
   templateUrl: './dashboard-page.html',
   styleUrl: './dashboard-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -61,6 +62,8 @@ export class DashboardPageComponent implements OnInit {
   yandexProjects = signal<YandexProjectsGroupItem[]>([]);
   yandexTotal: YandexTotal = { total_count: 0, total_kz_count: 0, url_count: 0 };
 
+  activePlatform = signal<'youtube' | 'instagram' | 'yandex' | 'tiktok'>('youtube');
+
   loadingTikTok = signal(false);
   tiktokError = signal<string | null>(null);
   tiktokAccounts = signal<TikTokAccountTotals[]>([]);
@@ -86,6 +89,28 @@ export class DashboardPageComponent implements OnInit {
     this.loadInstagramAccounts();
     this.loadYandexTotals();
     this.loadTikTokTotals();
+  }
+
+  setPlatform(p: 'youtube' | 'instagram' | 'yandex' | 'tiktok') {
+    this.activePlatform.set(p);
+  }
+
+  get activeError(): string | null {
+    switch (this.activePlatform()) {
+      case 'youtube': return this.error() || this.channelsError();
+      case 'instagram': return this.instagramError();
+      case 'yandex': return this.yandexError();
+      case 'tiktok': return this.tiktokError();
+    }
+  }
+
+  get activeLoading(): boolean {
+    switch (this.activePlatform()) {
+      case 'youtube': return this.loadingProjects() || this.loadingInfo() || this.loadingChannels();
+      case 'instagram': return this.loadingInstagram();
+      case 'yandex': return this.loadingYandex();
+      case 'tiktok': return this.loadingTikTok();
+    }
   }
 
   get selectedProjectLabel() {

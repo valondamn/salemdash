@@ -1,23 +1,20 @@
 <div class="stats-page page">
   <section class="hero card">
     <div class="hero-copy">
-      <span class="eyebrow">{{ mode === 'compare' ? 'Режим сравнения' : 'Аналитика' }}</span>
       <h1>Статистика</h1>
-      <p class="hero-text">
-        YouTube, Яндекс и Instagram в одном экране.
-      </p>
     </div>
 
     <div class="hero-actions">
-      <div class="top-tabs">
-        <button class="tab" [class.active]="mode === 'single'" (click)="setMode('single')">Один набор</button>
-        <button class="tab" [class.active]="mode === 'compare'" (click)="setMode('compare')">Сравнение</button>
-      </div>
-
       <div class="top-tabs source-tabs">
         <button class="tab" [class.active]="activeSource === 'youtube'" (click)="setSource('youtube')">YouTube</button>
         <button class="tab" [class.active]="activeSource === 'yandex'" (click)="setSource('yandex')">Яндекс</button>
         <button class="tab" [class.active]="activeSource === 'instagram'" (click)="setSource('instagram')">Instagram</button>
+        <button class="tab" [class.active]="activeSource === 'tiktok'" (click)="setSource('tiktok')">TikTok</button>
+      </div>
+
+      <div class="top-tabs">
+        <button class="tab" [class.active]="mode === 'single'" (click)="setMode('single')">Один набор</button>
+        <button class="tab" [class.active]="mode === 'compare'" (click)="setMode('compare')">Сравнение</button>
       </div>
     </div>
   </section>
@@ -25,18 +22,12 @@
   <section class="control-card card">
     <div class="control-head">
       <div>
-        <div class="section-title">{{ mode === 'compare' ? 'Сравнение' : 'Набор данных' }}</div>
-        <p class="muted">{{ getSourceDescription() }}</p>
+        <div class="section-title">{{ mode === 'compare' ? 'Сравнение' : 'Данные' }}</div>
       </div>
 
       <button class="btn accent-btn" (click)="onRefresh()" [disabled]="currentLoading || loadingProjects">
         {{ currentLoading || loadingProjects ? 'Обновляем...' : 'Обновить данные' }}
       </button>
-    </div>
-
-    <div class="source-note">
-      <span class="source-note__badge">Как читать этот источник</span>
-      <p class="source-note__text">{{ getSelectionHint() }}</p>
     </div>
 
     <div class="control-grid" *ngIf="activeSource === 'youtube' && mode === 'single'">
@@ -107,6 +98,40 @@
       </label>
     </div>
 
+    <div class="control-grid" *ngIf="activeSource === 'tiktok' && mode === 'single'">
+      <label class="control-item">
+        <span class="control-label">TikTok аккаунт</span>
+        <select class="select compact-select" [(ngModel)]="tiktokSingleId">
+          <option value="" disabled>Выберите аккаунт...</option>
+          <option *ngFor="let acc of tiktokAccounts" [value]="acc.account_id">
+            {{ acc.channel_name }}
+          </option>
+        </select>
+      </label>
+    </div>
+
+    <div class="control-grid compare-grid" *ngIf="activeSource === 'tiktok' && mode === 'compare'">
+      <label class="control-item">
+        <span class="control-label">Аккаунт A</span>
+        <select class="select compact-select accent-a" [(ngModel)]="tiktokCompareAId">
+          <option value="" disabled>Аккаунт A...</option>
+          <option *ngFor="let acc of tiktokAccounts" [value]="acc.account_id">
+            {{ acc.channel_name }}
+          </option>
+        </select>
+      </label>
+
+      <label class="control-item">
+        <span class="control-label">Аккаунт B</span>
+        <select class="select compact-select accent-b" [(ngModel)]="tiktokCompareBId">
+          <option value="" disabled>Аккаунт B...</option>
+          <option *ngFor="let acc of tiktokAccounts" [value]="acc.account_id">
+            {{ acc.channel_name }}
+          </option>
+        </select>
+      </label>
+    </div>
+
     <div class="control-grid" *ngIf="activeSource === 'instagram' && mode === 'single'">
       <label class="control-item">
         <span class="control-label">Instagram аккаунт</span>
@@ -165,11 +190,14 @@
     *ngIf="
       !loadingInfo &&
       !loadingProjects &&
+      !loadingTiktok &&
       (
         (activeSource === 'youtube' && mode === 'single' && !hasYoutubeSingleData) ||
         (activeSource === 'youtube' && mode === 'compare' && !hasYoutubeCompareData) ||
         (activeSource === 'yandex' && !hasYandexData) ||
-        (activeSource === 'instagram' && !hasInstagramData)
+        (activeSource === 'instagram' && !hasInstagramData) ||
+        (activeSource === 'tiktok' && mode === 'single' && !hasTikTokData) ||
+        (activeSource === 'tiktok' && mode === 'compare' && !hasTikTokCompareData)
       )
     "
   >
@@ -244,4 +272,20 @@
     [secondaryLabel]="getCompareSecondaryLabel()"
     [summary]="getCompareSummary(instagramCompareRows, getComparePrimaryLabel(), getCompareSecondaryLabel())"
   ></app-instagram-compare-stats>
+
+  <app-tiktok-single-stats
+    *ngIf="activeSource === 'tiktok' && mode === 'single' && hasTikTokData && tiktokTotal"
+    [total]="tiktokTotal"
+    [accounts]="tiktokAccounts"
+  ></app-tiktok-single-stats>
+
+  <app-tiktok-compare-stats
+    *ngIf="activeSource === 'tiktok' && mode === 'compare' && hasTikTokCompareData"
+    [rows]="tiktokCompareRows"
+    [accountA]="tiktokCompareAccountA"
+    [accountB]="tiktokCompareAccountB"
+    [primaryLabel]="getTikTokComparePrimaryLabel()"
+    [secondaryLabel]="getTikTokCompareSecondaryLabel()"
+    [summary]="getCompareSummary(tiktokCompareRows, getTikTokComparePrimaryLabel(), getTikTokCompareSecondaryLabel())"
+  ></app-tiktok-compare-stats>
 </div>

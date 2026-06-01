@@ -1,7 +1,7 @@
 import { EpisodeInfo, InstagramAccount, YandexProjectAnalytics, YandexProjectUrlMetric } from '../../shared/services/ssm-models';
 
 export type Mode = 'single' | 'compare';
-export type Source = 'youtube' | 'yandex' | 'instagram';
+export type Source = 'youtube' | 'yandex' | 'instagram' | 'tiktok';
 export type MetricFormat = 'number' | 'percent' | 'decimal';
 export type MetricTone = 'positive' | 'negative' | 'neutral';
 export type MetricWinner = 'a' | 'b' | 'tie';

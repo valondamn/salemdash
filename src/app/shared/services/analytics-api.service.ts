@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, map, shareReplay } from 'rxjs';
+import { Observable, catchError, map, shareReplay, throwError, timeout } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import {
@@ -27,6 +27,7 @@ import {
 @Injectable({ providedIn: 'root' })
 export class AnalyticsApiService {
   private readonly baseUrl = environment.apiBaseUrl;
+  private readonly requestTimeoutMs = 15000;
   private visits$?: Observable<VisitsResponse>;
   private normalizedVisits$?: Observable<ReturnType<typeof normalizeVisits>>;
   private youtubeChannels$?: Observable<ReturnType<typeof this.buildYoutubeChannels>>;
@@ -41,7 +42,15 @@ export class AnalyticsApiService {
 
   getVisits(force = false) {
     if (!this.visits$ || force) {
-      this.visits$ = this.http.get<VisitsResponse>(`${this.baseUrl}/visits`).pipe(shareReplay(1));
+      this.visits$ = this.http.get<VisitsResponse>(`${this.baseUrl}/visits`).pipe(
+        timeout({ first: this.requestTimeoutMs }),
+        catchError((error) => {
+          this.visits$ = undefined;
+          this.normalizedVisits$ = undefined;
+          return throwError(() => error);
+        }),
+        shareReplay({ bufferSize: 1, refCount: true })
+      );
     }
 
     return this.visits$;
@@ -51,7 +60,7 @@ export class AnalyticsApiService {
     if (!this.normalizedVisits$ || force) {
       this.normalizedVisits$ = this.getVisits(force).pipe(
         map((response) => normalizeVisits(response)),
-        shareReplay(1)
+        shareReplay({ bufferSize: 1, refCount: true })
       );
     }
 
@@ -63,8 +72,13 @@ export class AnalyticsApiService {
       this.youtubeChannels$ = this.http
         .get<YoutubeChannelApiItem[]>(`${this.baseUrl}/ssm/channels/youtube`)
         .pipe(
+          timeout({ first: this.requestTimeoutMs }),
           map((items) => this.buildYoutubeChannels(items)),
-          shareReplay(1)
+          catchError((error) => {
+            this.youtubeChannels$ = undefined;
+            return throwError(() => error);
+          }),
+          shareReplay({ bufferSize: 1, refCount: true })
         );
     }
 
@@ -76,8 +90,13 @@ export class AnalyticsApiService {
       this.instagramAccounts$ = this.http
         .get<InstagramAccountApiItem[]>(`${this.baseUrl}/ssm/salem_dune/instagram`)
         .pipe(
+          timeout({ first: this.requestTimeoutMs }),
           map((items) => this.buildInstagramAccounts(items)),
-          shareReplay(1)
+          catchError((error) => {
+            this.instagramAccounts$ = undefined;
+            return throwError(() => error);
+          }),
+          shareReplay({ bufferSize: 1, refCount: true })
         );
     }
 
@@ -89,8 +108,13 @@ export class AnalyticsApiService {
       this.yandexProjects$ = this.http
         .get<YandexProjectsGroupItemApi[]>(`${this.baseUrl}/ssm/yandex_projects`)
         .pipe(
+          timeout({ first: this.requestTimeoutMs }),
           map((items) => normalizeYandexProjectsGroup(items)),
-          shareReplay(1)
+          catchError((error) => {
+            this.yandexProjects$ = undefined;
+            return throwError(() => error);
+          }),
+          shareReplay({ bufferSize: 1, refCount: true })
         );
     }
 
@@ -102,8 +126,13 @@ export class AnalyticsApiService {
       this.yandexTotal$ = this.http
         .get<YandexTotalApiResponse>(`${this.baseUrl}/ssm/yandex_total`)
         .pipe(
+          timeout({ first: this.requestTimeoutMs }),
           map((response) => normalizeYandexTotal(response)),
-          shareReplay(1)
+          catchError((error) => {
+            this.yandexTotal$ = undefined;
+            return throwError(() => error);
+          }),
+          shareReplay({ bufferSize: 1, refCount: true })
         );
     }
 
@@ -116,8 +145,13 @@ export class AnalyticsApiService {
       const request$ = this.http
         .get<YandexProjectAnalyticsApiResponse>(`${this.baseUrl}/ssm/yandex_byprojectid=${projectId}`)
         .pipe(
+          timeout({ first: this.requestTimeoutMs }),
           map((response) => normalizeYandexProjectAnalytics(response)),
-          shareReplay(1)
+          catchError((error) => {
+            this.yandexByProjectCache.delete(projectId);
+            return throwError(() => error);
+          }),
+          shareReplay({ bufferSize: 1, refCount: true })
         );
 
       this.yandexByProjectCache.set(projectId, request$);
@@ -131,8 +165,13 @@ export class AnalyticsApiService {
       this.tiktokTotal$ = this.http
         .get<TikTokTotalApiResponse>(`${this.baseUrl}/ssm/tiktok_total`)
         .pipe(
+          timeout({ first: this.requestTimeoutMs }),
           map((response) => normalizeTikTokTotal(response)),
-          shareReplay(1)
+          catchError((error) => {
+            this.tiktokTotal$ = undefined;
+            return throwError(() => error);
+          }),
+          shareReplay({ bufferSize: 1, refCount: true })
         );
     }
 
@@ -144,8 +183,13 @@ export class AnalyticsApiService {
       this.tiktokTotalsByAccount$ = this.http
         .get<TikTokAccountTotalsApiItem[]>(`${this.baseUrl}/ssm/tiktok_totals_by_account`)
         .pipe(
+          timeout({ first: this.requestTimeoutMs }),
           map((items) => normalizeTikTokAccountTotals(items)),
-          shareReplay(1)
+          catchError((error) => {
+            this.tiktokTotalsByAccount$ = undefined;
+            return throwError(() => error);
+          }),
+          shareReplay({ bufferSize: 1, refCount: true })
         );
     }
 

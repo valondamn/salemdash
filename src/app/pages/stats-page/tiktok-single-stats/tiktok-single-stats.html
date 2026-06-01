@@ -1,0 +1,85 @@
+<div class="main-content">
+  <section class="context-banner card">
+    <div>
+      <span class="eyebrow">Итоги TikTok</span>
+      <h2>Общий обзор</h2>
+    </div>
+    <div class="context-chip">{{ total.accounts_count }} аккаунт{{ total.accounts_count === 1 ? '' : total.accounts_count < 5 ? 'а' : 'ов' }}</div>
+  </section>
+
+  <section class="stats-grid tiktok-stats-grid">
+    <div class="stat card accent-cyan">
+      <div class="label">Подписчики</div>
+      <div class="value">{{ fmtCompact(total.total_followers) }}</div>
+      <div class="hint muted">суммарно</div>
+    </div>
+
+    <div class="stat card accent-blue">
+      <div class="label">Просмотры</div>
+      <div class="value">{{ fmtCompact(total.total_views) }}</div>
+      <div class="hint muted">суммарно</div>
+    </div>
+
+    <div class="stat card accent-rose">
+      <div class="label">Лайки</div>
+      <div class="value">{{ fmtCompact(total.total_likes) }}</div>
+      <div class="hint muted">суммарно</div>
+    </div>
+
+    <div class="stat card accent-amber">
+      <div class="label">Шеры</div>
+      <div class="value">{{ fmtCompact(total.total_shares) }}</div>
+      <div class="hint muted">суммарно</div>
+    </div>
+
+    <div class="stat card accent-violet">
+      <div class="label">Профиль лайки</div>
+      <div class="value">{{ fmtCompact(total.total_profile_likes) }}</div>
+      <div class="hint muted">на аккаунтах</div>
+    </div>
+
+    <div class="stat card accent-emerald">
+      <div class="label">Видео</div>
+      <div class="value">{{ fmt(total.total_videos) }}</div>
+      <div class="hint muted">опубликовано</div>
+    </div>
+  </section>
+
+  <section class="card panel" *ngIf="accounts.length">
+    <div class="panel-head">
+      <div>
+        <div class="panel-title">Аккаунты TikTok</div>
+      </div>
+      <div class="panel-tag">{{ accounts.length }}</div>
+    </div>
+
+    <div class="table modern-table">
+      <div class="row headrow">
+        <div>Аккаунт</div>
+        <div>Подписчики</div>
+        <div>Просмотры</div>
+        <div>Лайки</div>
+        <div>Шеры</div>
+        <div>Видео</div>
+        <div>Обновлено</div>
+      </div>
+
+      <div class="row" *ngFor="let account of accounts">
+        <div class="episode-cell">
+          <a
+            class="profile-link"
+            [href]="tiktokUrl(account.channel_url)"
+            target="_blank"
+            rel="noreferrer"
+          >{{ account.channel_name || 'Аккаунт ' + account.account_id }}</a>
+        </div>
+        <div>{{ fmtCompact(account.followers) }}</div>
+        <div>{{ fmtCompact(account.total_views) }}</div>
+        <div>{{ fmtCompact(account.total_likes) }}</div>
+        <div>{{ fmtCompact(account.total_shares) }}</div>
+        <div>{{ fmt(account.total_videos) }}</div>
+        <div class="muted">{{ updatedDate(account.updated_at) }}</div>
+      </div>
+    </div>
+  </section>
+</div>

@@ -1,13 +1,13 @@
 <div class="dashboard-page">
+
+  <!-- Top header -->
   <header class="dashboard-page__head card">
     <div class="dashboard-page__title-wrap">
       <h1 class="dashboard-page__title">Дашборд</h1>
-      <p class="dashboard-page__subtitle">
-        Быстрый срез по проекту, YouTube и Instagram.
-      </p>
+      <p class="dashboard-page__subtitle">Общий срез по всем платформам.</p>
     </div>
 
-    <div class="dashboard-page__controls">
+    <div class="dashboard-page__controls" *ngIf="activePlatform() === 'youtube'">
       <select
         class="dashboard-page__select"
         [(ngModel)]="selectedProjectId"
@@ -26,381 +26,423 @@
     </div>
   </header>
 
-  <div class="dashboard-page__notice" *ngIf="error()">{{ error() }}</div>
+  <!-- Platform tab bar -->
+  <nav class="platform-tabs-bar">
+    <button
+      class="platform-tab"
+      [class.active]="activePlatform() === 'youtube'"
+      (click)="setPlatform('youtube')"
+    >
+      <span class="platform-tab__stripe platform-tab__stripe--youtube"></span>
+      <span class="platform-tab__icon platform-tab__icon--youtube">▶</span>
+      <span class="platform-tab__body">
+        <span class="platform-tab__name">YouTube</span>
+        <span class="platform-tab__meta" *ngIf="!loadingChannels()">{{ channels().length }} каналов</span>
+        <span class="platform-tab__loading" *ngIf="loadingChannels()">загружаем...</span>
+      </span>
+    </button>
 
-  <section class="dashboard-page__status card" *ngIf="loadingProjects() || loadingInfo()">
+    <button
+      class="platform-tab"
+      [class.active]="activePlatform() === 'instagram'"
+      (click)="setPlatform('instagram')"
+    >
+      <span class="platform-tab__stripe platform-tab__stripe--instagram"></span>
+      <span class="platform-tab__icon platform-tab__icon--instagram">◉</span>
+      <span class="platform-tab__body">
+        <span class="platform-tab__name">Instagram</span>
+        <span class="platform-tab__meta" *ngIf="!loadingInstagram()">{{ instagramAccounts().length }} аккаунтов</span>
+        <span class="platform-tab__loading" *ngIf="loadingInstagram()">загружаем...</span>
+      </span>
+    </button>
+
+    <button
+      class="platform-tab"
+      [class.active]="activePlatform() === 'yandex'"
+      (click)="setPlatform('yandex')"
+    >
+      <span class="platform-tab__stripe platform-tab__stripe--yandex"></span>
+      <span class="platform-tab__icon platform-tab__icon--yandex">Я</span>
+      <span class="platform-tab__body">
+        <span class="platform-tab__name">Яндекс</span>
+        <span class="platform-tab__meta" *ngIf="!loadingYandex()">{{ fmt(yandexTotal.total_count) }} total</span>
+        <span class="platform-tab__loading" *ngIf="loadingYandex()">загружаем...</span>
+      </span>
+    </button>
+
+    <button
+      class="platform-tab"
+      [class.active]="activePlatform() === 'tiktok'"
+      (click)="setPlatform('tiktok')"
+    >
+      <span class="platform-tab__stripe platform-tab__stripe--tiktok"></span>
+      <span class="platform-tab__icon platform-tab__icon--tiktok">♪</span>
+      <span class="platform-tab__body">
+        <span class="platform-tab__name">TikTok</span>
+        <span class="platform-tab__meta" *ngIf="!loadingTikTok()">{{ tiktokAccounts().length }} аккаунтов</span>
+        <span class="platform-tab__loading" *ngIf="loadingTikTok()">загружаем...</span>
+      </span>
+    </button>
+  </nav>
+
+  <!-- Error / loading banners (shared) -->
+  <div class="dashboard-page__notice" *ngIf="activeError">{{ activeError }}</div>
+
+  <section class="dashboard-page__status card" *ngIf="activeLoading">
     <div class="dashboard-page__status-dot"></div>
     <div>
       <div class="dashboard-page__status-title">
-        {{ loadingProjects() ? 'Загружаем список проектов' : 'Обновляем данные проекта' }}
+        {{ activePlatform() === 'youtube' && loadingProjects() ? 'Загружаем список проектов' : 'Обновляем данные' }}
       </div>
       <p class="dashboard-page__status-copy">
-        {{ loadingProjects() ? 'Подготовим список проектов.' : 'Обновляем эпизоды для проекта ' + selectedProjectLabel + '.' }}
+        {{ activePlatform() === 'youtube' && loadingProjects() ? 'Подготовим список проектов.' : 'Получаем свежие данные с API.' }}
       </p>
     </div>
   </section>
 
-  <section class="dashboard-page__stats">
-    <div class="dashboard-page__stat card">
-      <div class="dashboard-page__label">Эпизоды</div>
-      <div class="dashboard-page__value">{{ episodes().length }}</div>
-      <div class="dashboard-page__hint">элементов из API</div>
-    </div>
+  <!-- ═══════════════════ YOUTUBE ═══════════════════ -->
+  <div class="platform-section" *ngIf="activePlatform() === 'youtube'">
 
-    <div class="dashboard-page__stat card">
-      <div class="dashboard-page__label">Просмотры</div>
-      <div class="dashboard-page__value">{{ fmt(totalViews) }}</div>
-      <div class="dashboard-page__hint">сумма</div>
-    </div>
-
-    <div class="dashboard-page__stat card">
-      <div class="dashboard-page__label">Лайки</div>
-      <div class="dashboard-page__value">{{ fmt(totalLikes) }}</div>
-      <div class="dashboard-page__hint">сумма</div>
-    </div>
-
-    <div class="dashboard-page__stat card">
-      <div class="dashboard-page__label">Комментарии</div>
-      <div class="dashboard-page__value">{{ fmt(totalComments) }}</div>
-      <div class="dashboard-page__hint">сумма</div>
-    </div>
-  </section>
-
-  <section class="dashboard-page__panel card">
-    <div class="dashboard-page__panel-head">
-      <div>
-        <div class="dashboard-page__panel-title">Эпизоды</div>
-        <p class="dashboard-page__panel-copy">
-          <strong>{{ selectedProjectLabel }}</strong>
-        </p>
-      </div>
-      <div class="dashboard-page__muted" *ngIf="loadingInfo()">Загружаем данные...</div>
-    </div>
-
-    <div class="dashboard-page__loading-table" *ngIf="loadingInfo() && !hasEpisodes">
-      <div class="dashboard-page__loading-row" *ngFor="let _ of [1, 2, 3, 4, 5]"></div>
-    </div>
-
-    <div class="dashboard-page__empty" *ngIf="!loadingInfo() && !hasEpisodes">
-      По выбранному проекту пока нет данных по эпизодам. Попробуйте другой проект или обновите данные позже.
-    </div>
-
-    <div class="dashboard-page__table" *ngIf="hasEpisodes">
-      <div class="dashboard-page__row dashboard-page__row--head">
-        <div>Эпизод</div>
-        <div>Просмотры</div>
-        <div>Лайки</div>
-        <div>Комментарии</div>
-        <div>Релиз</div>
-      </div>
-
-      <div class="dashboard-page__row" *ngFor="let e of episodes().slice(0, 15)">
-        <div class="dashboard-page__episode">{{ e.episode_name || '—' }}</div>
-        <div>{{ fmt(toNum(e.youtube_views) || 0) }}</div>
-        <div>{{ fmt(toNum(e.youtube_likes) || 0) }}</div>
-        <div>{{ fmt(toNum(e.youtube_comments) || 0) }}</div>
-        <div class="dashboard-page__muted">{{ (e.youtube_release_date || e.release_date || '').slice(0, 10) || '—' }}</div>
-      </div>
-    </div>
-  </section>
-
-  <div class="dashboard-page__notice" *ngIf="channelsError()">{{ channelsError() }}</div>
-
-  <section class="dashboard-page__panel card">
-    <div class="dashboard-page__panel-head">
-      <div>
-        <div class="dashboard-page__panel-title">Общие данные по каналам YouTube</div>
-        <p class="dashboard-page__panel-copy">Общий snapshot по каналам.</p>
-      </div>
-      <div class="dashboard-page__muted" *ngIf="loadingChannels()">Загружаем итоги...</div>
-    </div>
-
-    <section class="dashboard-page__stats dashboard-page__stats--channels">
+    <section class="dashboard-page__stats">
       <div class="dashboard-page__stat card">
-        <div class="dashboard-page__label">Каналы</div>
-        <div class="dashboard-page__value">{{ fmt(channels().length) }}</div>
-        <div class="dashboard-page__hint">связаны с API</div>
+        <div class="dashboard-page__label">Эпизоды</div>
+        <div class="dashboard-page__value" [countUp]="episodes().length"></div>
+        <div class="dashboard-page__hint">в проекте</div>
       </div>
-
-      <div class="dashboard-page__stat card">
-        <div class="dashboard-page__label">Подписчики</div>
-        <div class="dashboard-page__value">{{ fmt(totalChannelSubscribers) }}</div>
-        <div class="dashboard-page__hint">по всем каналам</div>
-      </div>
-
       <div class="dashboard-page__stat card">
         <div class="dashboard-page__label">Просмотры</div>
-        <div class="dashboard-page__value">{{ fmt(totalChannelViews) }}</div>
-        <div class="dashboard-page__hint">по всем каналам</div>
+        <div class="dashboard-page__value" [countUp]="totalViews"></div>
+        <div class="dashboard-page__hint">сумма</div>
       </div>
-
       <div class="dashboard-page__stat card">
         <div class="dashboard-page__label">Лайки</div>
-        <div class="dashboard-page__value">{{ fmt(totalChannelLikes) }}</div>
-        <div class="dashboard-page__hint">по всем каналам</div>
+        <div class="dashboard-page__value" [countUp]="totalLikes"></div>
+        <div class="dashboard-page__hint">сумма</div>
       </div>
-
       <div class="dashboard-page__stat card">
         <div class="dashboard-page__label">Комментарии</div>
-        <div class="dashboard-page__value">{{ fmt(totalChannelComments) }}</div>
-        <div class="dashboard-page__hint">по всем каналам</div>
+        <div class="dashboard-page__value" [countUp]="totalComments"></div>
+        <div class="dashboard-page__hint">сумма</div>
       </div>
     </section>
 
-    <div class="dashboard-page__loading-table" *ngIf="loadingChannels() && !channels().length">
-      <div class="dashboard-page__loading-row" *ngFor="let _ of [1, 2, 3, 4]"></div>
-    </div>
-
-    <div class="dashboard-page__empty" *ngIf="!loadingChannels() && !channels().length">
-      Данные по YouTube-каналам пока не пришли из API.
-    </div>
-
-    <div class="dashboard-page__table dashboard-page__table--channels" *ngIf="channels().length">
-      <div class="dashboard-page__row dashboard-page__row--head dashboard-page__row--channels">
-        <div>Канал</div>
-        <div>Подписчики</div>
-        <div>Просмотры</div>
-        <div>Лайки</div>
-        <div>Комментарии</div>
-        <div>Просмотры за квартал</div>
-      </div>
-
-      <div class="dashboard-page__row dashboard-page__row--channels" *ngFor="let channel of topChannels()">
-        <div class="dashboard-page__episode">
-          <a class="dashboard-page__channel-link" [href]="channelUrl(channel.link)" target="_blank" rel="noreferrer">
-            {{ channel.name }}
-          </a>
+    <section class="dashboard-page__panel card">
+      <div class="dashboard-page__panel-head">
+        <div>
+          <div class="dashboard-page__panel-title">Эпизоды</div>
+          <p class="dashboard-page__panel-copy"><strong>{{ selectedProjectLabel }}</strong></p>
         </div>
-        <div>{{ fmt(channel.subs_count) }}</div>
-        <div>{{ fmt(channel.views_count) }}</div>
-        <div>{{ fmt(channel.likes_count) }}</div>
-        <div>{{ fmt(channel.comments_count) }}</div>
-        <div>{{ fmt(channel.quarter_views_count) }}</div>
+        <div class="dashboard-page__muted" *ngIf="loadingInfo()">Загружаем данные...</div>
       </div>
-    </div>
-  </section>
 
-  <div class="dashboard-page__notice" *ngIf="instagramError()">{{ instagramError() }}</div>
-
-  <section class="dashboard-page__panel card">
-    <div class="dashboard-page__panel-head">
-      <div>
-        <div class="dashboard-page__panel-title">Общие данные по Instagram</div>
-        <p class="dashboard-page__panel-copy">Общий snapshot по аккаунтам.</p>
+      <div class="dashboard-page__loading-table" *ngIf="loadingInfo() && !hasEpisodes">
+        <div class="dashboard-page__loading-row" *ngFor="let _ of [1, 2, 3, 4, 5]"></div>
       </div>
-      <div class="dashboard-page__muted" *ngIf="loadingInstagram()">Загружаем итоги...</div>
+
+      <div class="dashboard-page__empty" *ngIf="!loadingInfo() && !hasEpisodes">
+        По выбранному проекту пока нет данных по эпизодам. Попробуйте другой проект или обновите данные позже.
+      </div>
+
+      <div class="dashboard-page__table" *ngIf="hasEpisodes">
+        <div class="dashboard-page__row dashboard-page__row--head">
+          <div>Эпизод</div>
+          <div>Просмотры</div>
+          <div>Лайки</div>
+          <div>Комментарии</div>
+          <div>Релиз</div>
+        </div>
+        <div class="dashboard-page__row" *ngFor="let e of episodes().slice(0, 15)">
+          <div class="dashboard-page__episode">{{ e.episode_name || '—' }}</div>
+          <div>{{ fmt(toNum(e.youtube_views) || 0) }}</div>
+          <div>{{ fmt(toNum(e.youtube_likes) || 0) }}</div>
+          <div>{{ fmt(toNum(e.youtube_comments) || 0) }}</div>
+          <div class="dashboard-page__muted">{{ (e.youtube_release_date || e.release_date || '').slice(0, 10) || '—' }}</div>
+        </div>
+      </div>
+    </section>
+
+    <div class="dashboard-page__divider">
+      <span class="dashboard-page__divider-label">Каналы</span>
     </div>
+
+    <section class="dashboard-page__panel card">
+      <div class="dashboard-page__panel-head">
+        <div>
+          <div class="dashboard-page__panel-title">YouTube-каналы</div>
+        </div>
+        <div class="dashboard-page__muted" *ngIf="loadingChannels()">Загружаем...</div>
+      </div>
+
+      <section class="dashboard-page__stats dashboard-page__stats--channels">
+        <div class="dashboard-page__stat card">
+          <div class="dashboard-page__label">Каналы</div>
+          <div class="dashboard-page__value" [countUp]="channels().length"></div>
+          <div class="dashboard-page__hint">всего</div>
+        </div>
+        <div class="dashboard-page__stat card">
+          <div class="dashboard-page__label">Подписчики</div>
+          <div class="dashboard-page__value" [countUp]="totalChannelSubscribers"></div>
+          <div class="dashboard-page__hint">по всем</div>
+        </div>
+        <div class="dashboard-page__stat card">
+          <div class="dashboard-page__label">Просмотры</div>
+          <div class="dashboard-page__value" [countUp]="totalChannelViews"></div>
+          <div class="dashboard-page__hint">по всем</div>
+        </div>
+        <div class="dashboard-page__stat card">
+          <div class="dashboard-page__label">Лайки</div>
+          <div class="dashboard-page__value" [countUp]="totalChannelLikes"></div>
+          <div class="dashboard-page__hint">по всем</div>
+        </div>
+        <div class="dashboard-page__stat card">
+          <div class="dashboard-page__label">Комментарии</div>
+          <div class="dashboard-page__value" [countUp]="totalChannelComments"></div>
+          <div class="dashboard-page__hint">по всем</div>
+        </div>
+      </section>
+
+      <div class="dashboard-page__loading-table" *ngIf="loadingChannels() && !channels().length">
+        <div class="dashboard-page__loading-row" *ngFor="let _ of [1, 2, 3, 4]"></div>
+      </div>
+
+      <div class="dashboard-page__empty" *ngIf="!loadingChannels() && !channels().length">
+        Данные по YouTube-каналам пока не пришли из API.
+      </div>
+
+      <div class="dashboard-page__table dashboard-page__table--channels" *ngIf="channels().length">
+        <div class="dashboard-page__row dashboard-page__row--head dashboard-page__row--channels">
+          <div>Канал</div>
+          <div>Подписчики</div>
+          <div>Просмотры</div>
+          <div>Лайки</div>
+          <div>Комментарии</div>
+          <div>За квартал</div>
+        </div>
+        <div class="dashboard-page__row dashboard-page__row--channels" *ngFor="let channel of topChannels()">
+          <div class="dashboard-page__episode">
+            <a class="dashboard-page__channel-link" [href]="channelUrl(channel.link)" target="_blank" rel="noreferrer">
+              {{ channel.name }}
+            </a>
+          </div>
+          <div>{{ fmt(channel.subs_count) }}</div>
+          <div>{{ fmt(channel.views_count) }}</div>
+          <div>{{ fmt(channel.likes_count) }}</div>
+          <div>{{ fmt(channel.comments_count) }}</div>
+          <div>{{ fmt(channel.quarter_views_count) }}</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ═══════════════════ INSTAGRAM ═══════════════════ -->
+  <div class="platform-section" *ngIf="activePlatform() === 'instagram'">
 
     <section class="dashboard-page__stats dashboard-page__stats--instagram">
       <div class="dashboard-page__stat card">
         <div class="dashboard-page__label">Аккаунты</div>
-        <div class="dashboard-page__value">{{ fmt(instagramAccounts().length) }}</div>
-        <div class="dashboard-page__hint">доступно в API</div>
+        <div class="dashboard-page__value" [countUp]="instagramAccounts().length"></div>
+        <div class="dashboard-page__hint">всего</div>
       </div>
-
       <div class="dashboard-page__stat card">
         <div class="dashboard-page__label">Подписчики</div>
-        <div class="dashboard-page__value">{{ fmt(totalInstagramFollowers) }}</div>
-        <div class="dashboard-page__hint">по всем аккаунтам</div>
+        <div class="dashboard-page__value" [countUp]="totalInstagramFollowers"></div>
+        <div class="dashboard-page__hint">суммарно</div>
       </div>
-
       <div class="dashboard-page__stat card">
         <div class="dashboard-page__label">Посты</div>
-        <div class="dashboard-page__value">{{ fmt(totalInstagramPosts) }}</div>
-        <div class="dashboard-page__hint">всего опубликовано</div>
+        <div class="dashboard-page__value" [countUp]="totalInstagramPosts"></div>
+        <div class="dashboard-page__hint">опубликовано</div>
       </div>
-
       <div class="dashboard-page__stat card">
         <div class="dashboard-page__label">Просмотры</div>
-        <div class="dashboard-page__value">{{ fmt(totalInstagramViews) }}</div>
+        <div class="dashboard-page__value" [countUp]="totalInstagramViews"></div>
         <div class="dashboard-page__hint">суммарно</div>
       </div>
-
       <div class="dashboard-page__stat card">
         <div class="dashboard-page__label">Лайки</div>
-        <div class="dashboard-page__value">{{ fmt(totalInstagramLikes) }}</div>
+        <div class="dashboard-page__value" [countUp]="totalInstagramLikes"></div>
         <div class="dashboard-page__hint">суммарно</div>
       </div>
-
       <div class="dashboard-page__stat card">
         <div class="dashboard-page__label">Сохранения</div>
-        <div class="dashboard-page__value">{{ fmt(totalInstagramSaves) }}</div>
+        <div class="dashboard-page__value" [countUp]="totalInstagramSaves"></div>
         <div class="dashboard-page__hint">суммарно</div>
       </div>
     </section>
 
-    <div class="dashboard-page__loading-table" *ngIf="loadingInstagram() && !instagramAccounts().length">
-      <div class="dashboard-page__loading-row" *ngFor="let _ of [1, 2, 3, 4]"></div>
-    </div>
-
-    <div class="dashboard-page__empty" *ngIf="!loadingInstagram() && !instagramAccounts().length">
-      Данные по Instagram пока не пришли из API.
-    </div>
-
-    <div class="dashboard-page__table dashboard-page__table--instagram" *ngIf="instagramAccounts().length">
-      <div class="dashboard-page__row dashboard-page__row--head dashboard-page__row--instagram">
-        <div>Аккаунт</div>
-        <div>Подписчики</div>
-        <div>Посты</div>
-        <div>Просмотры</div>
-        <div>Лайки</div>
-        <div>Комментарии</div>
-        <div>Дата</div>
+    <section class="dashboard-page__panel card">
+      <div class="dashboard-page__panel-head">
+        <div class="dashboard-page__panel-title">Аккаунты Instagram</div>
+        <div class="dashboard-page__muted" *ngIf="loadingInstagram()">Загружаем...</div>
       </div>
 
-      <div class="dashboard-page__row dashboard-page__row--instagram" *ngFor="let account of topInstagramAccounts()">
-        <div class="dashboard-page__episode">
-          <a class="dashboard-page__channel-link" [href]="instagramUrl(account.username)" target="_blank" rel="noreferrer">
-            {{ account.page_name }}
-          </a>
-          <span class="dashboard-page__muted"> @{{ account.username }}</span>
+      <div class="dashboard-page__loading-table" *ngIf="loadingInstagram() && !instagramAccounts().length">
+        <div class="dashboard-page__loading-row" *ngFor="let _ of [1, 2, 3, 4]"></div>
+      </div>
+
+      <div class="dashboard-page__empty" *ngIf="!loadingInstagram() && !instagramAccounts().length">
+        Данные по Instagram пока не пришли из API.
+      </div>
+
+      <div class="dashboard-page__table dashboard-page__table--instagram" *ngIf="instagramAccounts().length">
+        <div class="dashboard-page__row dashboard-page__row--head dashboard-page__row--instagram">
+          <div>Аккаунт</div>
+          <div>Подписчики</div>
+          <div>Посты</div>
+          <div>Просмотры</div>
+          <div>Лайки</div>
+          <div>Комментарии</div>
+          <div>Дата</div>
         </div>
-        <div>{{ fmt(account.followers) }}</div>
-        <div>{{ fmt(account.posts) }}</div>
-        <div>{{ fmt(account.views_total) }}</div>
-        <div>{{ fmt(account.likes_total) }}</div>
-        <div>{{ fmt(account.comments_total) }}</div>
-        <div>{{ account.metric_date || '—' }}</div>
+        <div class="dashboard-page__row dashboard-page__row--instagram" *ngFor="let account of topInstagramAccounts()">
+          <div class="dashboard-page__episode">
+            <a class="dashboard-page__channel-link" [href]="instagramUrl(account.username)" target="_blank" rel="noreferrer">
+              {{ account.page_name }}
+            </a>
+            <span class="dashboard-page__muted"> @{{ account.username }}</span>
+          </div>
+          <div>{{ fmt(account.followers) }}</div>
+          <div>{{ fmt(account.posts) }}</div>
+          <div>{{ fmt(account.views_total) }}</div>
+          <div>{{ fmt(account.likes_total) }}</div>
+          <div>{{ fmt(account.comments_total) }}</div>
+          <div>{{ account.metric_date || '—' }}</div>
+        </div>
       </div>
-    </div>
-  </section>
+    </section>
+  </div>
 
-  <div class="dashboard-page__notice" *ngIf="yandexError()">{{ yandexError() }}</div>
-
-  <section class="dashboard-page__panel card">
-    <div class="dashboard-page__panel-head">
-      <div>
-        <div class="dashboard-page__panel-title">Общие данные по Yandex</div>
-        <p class="dashboard-page__panel-copy">Total по всем url и топ проектов по сумме трафика.</p>
-      </div>
-      <div class="dashboard-page__muted" *ngIf="loadingYandex()">Загружаем итоги...</div>
-    </div>
+  <!-- ═══════════════════ YANDEX ═══════════════════ -->
+  <div class="platform-section" *ngIf="activePlatform() === 'yandex'">
 
     <section class="dashboard-page__stats dashboard-page__stats--channels">
       <div class="dashboard-page__stat card">
         <div class="dashboard-page__label">URL</div>
-        <div class="dashboard-page__value">{{ fmt(yandexTotal.url_count) }}</div>
+        <div class="dashboard-page__value" [countUp]="yandexTotal.url_count"></div>
         <div class="dashboard-page__hint">всего</div>
       </div>
-
       <div class="dashboard-page__stat card">
         <div class="dashboard-page__label">Total</div>
-        <div class="dashboard-page__value">{{ fmt(yandexTotal.total_count) }}</div>
-        <div class="dashboard-page__hint">по всем url</div>
+        <div class="dashboard-page__value" [countUp]="yandexTotal.total_count"></div>
+        <div class="dashboard-page__hint">по всем URL</div>
       </div>
-
       <div class="dashboard-page__stat card">
         <div class="dashboard-page__label">KZ Total</div>
-        <div class="dashboard-page__value">{{ fmt(yandexTotal.total_kz_count) }}</div>
-        <div class="dashboard-page__hint">по всем url</div>
+        <div class="dashboard-page__value" [countUp]="yandexTotal.total_kz_count"></div>
+        <div class="dashboard-page__hint">по всем URL</div>
       </div>
     </section>
 
-    <div class="dashboard-page__loading-table" *ngIf="loadingYandex() && !yandexProjects().length">
-      <div class="dashboard-page__loading-row" *ngFor="let _ of [1, 2, 3, 4]"></div>
-    </div>
-
-    <div class="dashboard-page__empty" *ngIf="!loadingYandex() && !yandexProjects().length">
-      Данные по Yandex пока не пришли из API.
-    </div>
-
-    <div class="dashboard-page__table dashboard-page__table--channels" *ngIf="yandexProjects().length">
-      <div class="dashboard-page__row dashboard-page__row--head dashboard-page__row--channels">
-        <div>Проект</div>
-        <div>URL</div>
-        <div>Total</div>
-        <div>KZ Total</div>
-        <div>Среднее / URL</div>
-        <div>KZ / URL</div>
+    <section class="dashboard-page__panel card">
+      <div class="dashboard-page__panel-head">
+        <div class="dashboard-page__panel-title">Топ проектов по трафику</div>
+        <div class="dashboard-page__muted" *ngIf="loadingYandex()">Загружаем...</div>
       </div>
 
-      <div class="dashboard-page__row dashboard-page__row--channels" *ngFor="let item of yandexProjects()">
-        <div class="dashboard-page__episode">{{ item.project_name }}</div>
-        <div>{{ fmt(item.url_count) }}</div>
-        <div>{{ fmt(item.total_count) }}</div>
-        <div>{{ fmt(item.total_kz_count) }}</div>
-        <div>{{ fmt(avgPerUrl(item.total_count, item.url_count)) }}</div>
-        <div>{{ fmt(avgPerUrl(item.total_kz_count, item.url_count)) }}</div>
+      <div class="dashboard-page__loading-table" *ngIf="loadingYandex() && !yandexProjects().length">
+        <div class="dashboard-page__loading-row" *ngFor="let _ of [1, 2, 3, 4]"></div>
       </div>
-    </div>
-  </section>
 
-  <div class="dashboard-page__notice" *ngIf="tiktokError()">{{ tiktokError() }}</div>
-
-  <section class="dashboard-page__panel card">
-    <div class="dashboard-page__panel-head">
-      <div>
-        <div class="dashboard-page__panel-title">Общие данные по TikTok</div>
-        <p class="dashboard-page__panel-copy">Total по TikTok и группировка по аккаунтам.</p>
+      <div class="dashboard-page__empty" *ngIf="!loadingYandex() && !yandexProjects().length">
+        Данные по Yandex пока не пришли из API.
       </div>
-      <div class="dashboard-page__muted" *ngIf="loadingTikTok()">Загружаем итоги...</div>
-    </div>
+
+      <div class="dashboard-page__table dashboard-page__table--channels" *ngIf="yandexProjects().length">
+        <div class="dashboard-page__row dashboard-page__row--head dashboard-page__row--channels">
+          <div>Проект</div>
+          <div>URL</div>
+          <div>Total</div>
+          <div>KZ Total</div>
+          <div>Total / URL</div>
+          <div>KZ / URL</div>
+        </div>
+        <div class="dashboard-page__row dashboard-page__row--channels" *ngFor="let item of yandexProjects()">
+          <div class="dashboard-page__episode">{{ item.project_name }}</div>
+          <div>{{ fmt(item.url_count) }}</div>
+          <div>{{ fmt(item.total_count) }}</div>
+          <div>{{ fmt(item.total_kz_count) }}</div>
+          <div>{{ fmt(avgPerUrl(item.total_count, item.url_count)) }}</div>
+          <div>{{ fmt(avgPerUrl(item.total_kz_count, item.url_count)) }}</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ═══════════════════ TIKTOK ═══════════════════ -->
+  <div class="platform-section" *ngIf="activePlatform() === 'tiktok'">
 
     <section class="dashboard-page__stats dashboard-page__stats--instagram">
       <div class="dashboard-page__stat card">
         <div class="dashboard-page__label">Аккаунты</div>
-        <div class="dashboard-page__value">{{ fmt(tiktokTotal.accounts_count) }}</div>
+        <div class="dashboard-page__value" [countUp]="tiktokTotal.accounts_count"></div>
         <div class="dashboard-page__hint">в total</div>
       </div>
       <div class="dashboard-page__stat card">
         <div class="dashboard-page__label">Подписчики</div>
-        <div class="dashboard-page__value">{{ fmt(tiktokTotal.total_followers) }}</div>
+        <div class="dashboard-page__value" [countUp]="tiktokTotal.total_followers"></div>
         <div class="dashboard-page__hint">суммарно</div>
       </div>
       <div class="dashboard-page__stat card">
         <div class="dashboard-page__label">Просмотры</div>
-        <div class="dashboard-page__value">{{ fmt(tiktokTotal.total_views) }}</div>
+        <div class="dashboard-page__value" [countUp]="tiktokTotal.total_views"></div>
         <div class="dashboard-page__hint">суммарно</div>
       </div>
       <div class="dashboard-page__stat card">
         <div class="dashboard-page__label">Лайки</div>
-        <div class="dashboard-page__value">{{ fmt(tiktokTotal.total_likes) }}</div>
+        <div class="dashboard-page__value" [countUp]="tiktokTotal.total_likes"></div>
         <div class="dashboard-page__hint">по видео</div>
       </div>
       <div class="dashboard-page__stat card">
         <div class="dashboard-page__label">Шеры</div>
-        <div class="dashboard-page__value">{{ fmt(tiktokTotal.total_shares) }}</div>
+        <div class="dashboard-page__value" [countUp]="tiktokTotal.total_shares"></div>
         <div class="dashboard-page__hint">суммарно</div>
       </div>
       <div class="dashboard-page__stat card">
         <div class="dashboard-page__label">Профиль лайки</div>
-        <div class="dashboard-page__value">{{ fmt(tiktokTotal.total_profile_likes) }}</div>
+        <div class="dashboard-page__value" [countUp]="tiktokTotal.total_profile_likes"></div>
         <div class="dashboard-page__hint">на аккаунтах</div>
       </div>
     </section>
 
-    <div class="dashboard-page__loading-table" *ngIf="loadingTikTok() && !tiktokAccounts().length">
-      <div class="dashboard-page__loading-row" *ngFor="let _ of [1, 2, 3, 4]"></div>
-    </div>
-
-    <div class="dashboard-page__empty" *ngIf="!loadingTikTok() && !tiktokAccounts().length">
-      Данные по TikTok пока не пришли из API.
-    </div>
-
-    <div class="dashboard-page__table dashboard-page__table--instagram" *ngIf="tiktokAccounts().length">
-      <div class="dashboard-page__row dashboard-page__row--head dashboard-page__row--instagram">
-        <div>Аккаунт</div>
-        <div>Подписчики</div>
-        <div>Видео</div>
-        <div>Просмотры</div>
-        <div>Лайки</div>
-        <div>Шеры</div>
-        <div>Обновлено</div>
+    <section class="dashboard-page__panel card">
+      <div class="dashboard-page__panel-head">
+        <div class="dashboard-page__panel-title">Аккаунты TikTok</div>
+        <div class="dashboard-page__muted" *ngIf="loadingTikTok()">Загружаем...</div>
       </div>
 
-      <div class="dashboard-page__row dashboard-page__row--instagram" *ngFor="let account of tiktokAccounts()">
-        <div class="dashboard-page__episode">
-          <a class="dashboard-page__channel-link" [href]="tiktokUrl(account.channel_url)" target="_blank" rel="noreferrer">
-            {{ account.channel_name }}
-          </a>
+      <div class="dashboard-page__loading-table" *ngIf="loadingTikTok() && !tiktokAccounts().length">
+        <div class="dashboard-page__loading-row" *ngFor="let _ of [1, 2, 3, 4]"></div>
+      </div>
+
+      <div class="dashboard-page__empty" *ngIf="!loadingTikTok() && !tiktokAccounts().length">
+        Данные по TikTok пока не пришли из API.
+      </div>
+
+      <div class="dashboard-page__table dashboard-page__table--instagram" *ngIf="tiktokAccounts().length">
+        <div class="dashboard-page__row dashboard-page__row--head dashboard-page__row--instagram">
+          <div>Аккаунт</div>
+          <div>Подписчики</div>
+          <div>Видео</div>
+          <div>Просмотры</div>
+          <div>Лайки</div>
+          <div>Шеры</div>
+          <div>Обновлено</div>
         </div>
-        <div>{{ fmt(account.followers) }}</div>
-        <div>{{ fmt(account.total_videos) }}</div>
-        <div>{{ fmt(account.total_views) }}</div>
-        <div>{{ fmt(account.total_likes) }}</div>
-        <div>{{ fmt(account.total_shares) }}</div>
-        <div>{{ account.updated_at || '—' }}</div>
+        <div class="dashboard-page__row dashboard-page__row--instagram" *ngFor="let account of tiktokAccounts()">
+          <div class="dashboard-page__episode">
+            <a class="dashboard-page__channel-link" [href]="tiktokUrl(account.channel_url)" target="_blank" rel="noreferrer">
+              {{ account.channel_name }}
+            </a>
+          </div>
+          <div>{{ fmt(account.followers) }}</div>
+          <div>{{ fmt(account.total_videos) }}</div>
+          <div>{{ fmt(account.total_views) }}</div>
+          <div>{{ fmt(account.total_likes) }}</div>
+          <div>{{ fmt(account.total_shares) }}</div>
+          <div>{{ account.updated_at || '—' }}</div>
+        </div>
       </div>
-    </div>
-  </section>
+    </section>
+  </div>
+
 </div>

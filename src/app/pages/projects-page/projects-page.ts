@@ -2,8 +2,8 @@ import { ChangeDetectionStrategy, Component, DestroyRef, inject, OnInit, signal 
 import { NgFor, NgIf } from '@angular/common';
 import { FormControl, FormGroup, FormsModule, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { forkJoin } from 'rxjs';
-import { finalize } from 'rxjs/operators';
+import { forkJoin, of } from 'rxjs';
+import { catchError, finalize } from 'rxjs/operators';
 import { ToastrService } from 'ngx-toastr';
 
 import { Project, ProjectAccountOption, ProjectUpsertPayload } from '../../shared/services/ssm-models';
@@ -140,10 +140,10 @@ export class ProjectsPageComponent implements OnInit {
     this.error.set(null);
 
     forkJoin({
-      projects: this.projectsApi.getProjects(force),
-      youtubeChannels: this.projectsApi.getYoutubeChannelList(force),
-      instagramAccounts: this.projectsApi.getInstagramAccountList(force),
-      tiktokAccounts: this.projectsApi.getTikTokAccountList(force),
+      projects: this.projectsApi.getProjects(force).pipe(catchError(() => of<any[]>([]))),
+      youtubeChannels: this.projectsApi.getYoutubeChannelList(force).pipe(catchError(() => of<any[]>([]))),
+      instagramAccounts: this.projectsApi.getInstagramAccountList(force).pipe(catchError(() => of<any[]>([]))),
+      tiktokAccounts: this.projectsApi.getTikTokAccountList(force).pipe(catchError(() => of<any[]>([]))),
     })
       .pipe(
         finalize(() => this.loading.set(false)),

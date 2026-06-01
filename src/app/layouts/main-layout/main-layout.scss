@@ -1,9 +1,83 @@
+/* ── Ambient background orbs ── */
+.ambient-orbs {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.ambient-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+}
+
+.ambient-orb--1 {
+  width: 700px;
+  height: 700px;
+  top: -250px;
+  left: -180px;
+  background: radial-gradient(circle, rgba(79, 140, 255, 0.13), transparent 70%);
+  animation: orb-drift-1 22s ease-in-out infinite alternate;
+}
+
+.ambient-orb--2 {
+  width: 600px;
+  height: 600px;
+  bottom: -200px;
+  right: -150px;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.11), transparent 70%);
+  animation: orb-drift-2 28s ease-in-out infinite alternate;
+}
+
+.ambient-orb--3 {
+  width: 500px;
+  height: 500px;
+  top: 40%;
+  left: 35%;
+  background: radial-gradient(circle, rgba(34, 211, 238, 0.06), transparent 70%);
+  animation: orb-drift-3 20s ease-in-out infinite alternate;
+}
+
+.ambient-orb--4 {
+  width: 400px;
+  height: 400px;
+  top: 20%;
+  right: 10%;
+  background: radial-gradient(circle, rgba(251, 113, 133, 0.07), transparent 70%);
+  animation: orb-drift-4 32s ease-in-out infinite alternate;
+}
+
+@keyframes orb-drift-1 {
+  from { transform: translate(0, 0) scale(1); }
+  to   { transform: translate(90px, 70px) scale(1.18); }
+}
+
+@keyframes orb-drift-2 {
+  from { transform: translate(0, 0) scale(1); }
+  to   { transform: translate(-70px, -90px) scale(1.12); }
+}
+
+@keyframes orb-drift-3 {
+  from { transform: translate(-50%, -50%) scale(1); }
+  to   { transform: translate(-50%, -50%) scale(1.25) rotate(20deg); }
+}
+
+@keyframes orb-drift-4 {
+  from { transform: translate(0, 0) scale(1); }
+  to   { transform: translate(-50px, 60px) scale(1.1); }
+}
+
+/* ── Layout grid ── */
 .main-layout {
   min-height: 100vh;
   display: grid;
   grid-template-columns: 260px 1fr;
+  position: relative;
 }
 
+/* ── Sidebar ── */
 .main-layout__sidebar {
   padding: 16px;
   border-right: 1px solid var(--border);
@@ -11,15 +85,41 @@
   display: grid;
   grid-template-rows: auto 1fr auto;
   gap: 14px;
+  position: relative;
+  z-index: 1;
 }
 
+/* ── Brand ── */
 .main-layout__brand {
   height: 44px;
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.main-layout__brand-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(79, 140, 255, 0.95), rgba(34, 211, 238, 0.85));
+  color: #fff;
+  font-size: 16px;
   font-weight: 900;
-  letter-spacing: 0.3px;
+  box-shadow: 0 4px 14px rgba(79, 140, 255, 0.4);
+  flex-shrink: 0;
+}
+
+.main-layout__brand-name {
+  font-size: 17px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  background: linear-gradient(135deg, var(--text) 40%, rgba(79, 140, 255, 0.9));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .main-layout__tabs {
@@ -30,23 +130,41 @@
   width: 100%;
 }
 
+/* ── Content area ── */
 .main-layout__content {
   display: grid;
   grid-template-rows: 64px 1fr;
   min-width: 0;
+  position: relative;
+  z-index: 1;
 }
 
+/* ── Topbar ── */
 .main-layout__topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 10px 16px;
   border-bottom: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(11, 15, 23, 0.7);
+  backdrop-filter: blur(16px);
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .main-layout__title {
-  font-weight: 900;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.main-layout__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 .main-layout__page {
@@ -54,6 +172,7 @@
   min-width: 0;
 }
 
+/* ── Responsive ── */
 @media (max-width: 900px) {
   .main-layout {
     grid-template-columns: 1fr;
@@ -67,5 +186,10 @@
 
   .main-layout__logout {
     max-width: 220px;
+  }
+
+  .ambient-orb--3,
+  .ambient-orb--4 {
+    display: none;
   }
 }

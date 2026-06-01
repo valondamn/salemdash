@@ -117,7 +117,7 @@ export class EpisodesChartComponent implements AfterViewInit, OnChanges {
         itemHeight: 8,
       },
 
-      grid: { left: 18, right: 18, top: 36, bottom: 18, containLabel: true },
+      grid: { left: 18, right: 56, top: 36, bottom: 18, containLabel: true },
 
       xAxis: {
         type: 'category',
@@ -127,21 +127,39 @@ export class EpisodesChartComponent implements AfterViewInit, OnChanges {
         axisTick: { show: false },
       },
 
-      yAxis: {
-        type: 'value',
-        axisLabel: {
-          color: text,
-          formatter: (val: number) => this.fmtCompact(val),
+      yAxis: [
+        {
+          type: 'value',
+          name: 'Просмотры',
+          nameTextStyle: { color: text, fontSize: 10 },
+          axisLabel: {
+            color: text,
+            formatter: (val: number) => this.fmtCompact(val),
+          },
+          splitLine: { lineStyle: { color: grid } },
+          axisLine: { lineStyle: { color: axis } },
+          axisTick: { show: false },
         },
-        splitLine: { lineStyle: { color: grid } },
-        axisLine: { lineStyle: { color: axis } },
-        axisTick: { show: false },
-      },
+        {
+          type: 'value',
+          name: 'Реакции',
+          nameTextStyle: { color: text, fontSize: 10 },
+          position: 'right',
+          axisLabel: {
+            color: text,
+            formatter: (val: number) => this.fmtCompact(val),
+          },
+          splitLine: { show: false },
+          axisLine: { lineStyle: { color: axis } },
+          axisTick: { show: false },
+        },
+      ],
 
       series: [
         {
           name: 'Просмотры',
           type: 'line',
+          yAxisIndex: 0,
           smooth: true,
           showSymbol: false,
           data: views,
@@ -152,6 +170,7 @@ export class EpisodesChartComponent implements AfterViewInit, OnChanges {
         {
           name: 'Лайки',
           type: 'line',
+          yAxisIndex: 1,
           smooth: true,
           showSymbol: false,
           data: likes,
@@ -162,6 +181,7 @@ export class EpisodesChartComponent implements AfterViewInit, OnChanges {
         {
           name: 'Комментарии',
           type: 'bar',
+          yAxisIndex: 1,
           data: comments,
           itemStyle: { color: warm, opacity: 0.72 },
           barWidth: 10,

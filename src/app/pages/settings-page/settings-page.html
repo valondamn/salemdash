@@ -1,7 +1,7 @@
 <div class="settings-page">
   <header class="settings-page__header">
     <h1 class="settings-page__title">Настройки</h1>
-    <p class="settings-page__subtitle">Оформление и базовые предпочтения интерфейса.</p>
+    <p class="settings-page__subtitle">Оформление, профиль и доступ к административным функциям.</p>
   </header>
 
   <section class="settings-page__card card">
@@ -17,4 +17,107 @@
       </div>
     </div>
   </section>
+
+  <section class="settings-page__card card">
+    <div class="settings-page__section-head">
+      <div>
+        <div class="settings-page__label">Текущий пользователь</div>
+        <div class="settings-page__hint">Данные берутся из `/ssm/me` по активному JWT-токену.</div>
+      </div>
+    </div>
+
+    @if (currentUser; as user) {
+      <div class="settings-page__identity">
+        <div class="settings-page__identity-item">
+          <span class="settings-page__meta-label">Логин</span>
+          <strong>{{ user.login }}</strong>
+        </div>
+        <div class="settings-page__identity-item">
+          <span class="settings-page__meta-label">Роль</span>
+          <strong>{{ user.role }}</strong>
+        </div>
+      </div>
+    } @else {
+      <div class="settings-page__empty">Пользователь еще не загружен.</div>
+    }
+  </section>
+
+  @if (canManageUsers) {
+    <section class="settings-page__card card">
+      <div class="settings-page__section-head">
+        <div>
+          <div class="settings-page__label">Управление пользователями</div>
+          <div class="settings-page__hint">Доступно только для роли `super_user`.</div>
+        </div>
+      </div>
+
+      <form class="settings-page__form" [formGroup]="userForm" (ngSubmit)="createUser()">
+        <label class="settings-page__field">
+          <span class="settings-page__meta-label">Логин</span>
+          <input class="settings-page__input" type="text" formControlName="login" placeholder="editor1" />
+        </label>
+
+        <label class="settings-page__field">
+          <span class="settings-page__meta-label">Пароль</span>
+          <input class="settings-page__input" type="password" formControlName="password" placeholder="Password123" />
+        </label>
+
+        <label class="settings-page__field">
+          <span class="settings-page__meta-label">Роль</span>
+          <select class="settings-page__input" formControlName="role">
+            <option *ngFor="let role of roles" [value]="role.code">{{ role.name }} ({{ role.code }})</option>
+          </select>
+        </label>
+
+        <button class="btn primary settings-page__action" type="submit" [disabled]="savingUser || loadingUsers">
+          {{ savingUser ? 'Создаем...' : 'Создать пользователя' }}
+        </button>
+      </form>
+
+      @if (usersError) {
+        <div class="settings-page__error">{{ usersError }}</div>
+      }
+
+      @if (loadingUsers) {
+        <div class="settings-page__empty">Загружаем список пользователей...</div>
+      } @else if (users.length) {
+        <div class="settings-page__users">
+          <div class="settings-page__users-head">
+            <span>Пользователь</span>
+            <span>Роль</span>
+            <span>Статус</span>
+            <span>Создан</span>
+            <span></span>
+          </div>
+
+          <div class="settings-page__user-row" *ngFor="let user of users; trackBy: trackByUserId">
+            <span class="settings-page__user-login">{{ user.login }}</span>
+            <span>{{ user.role }}</span>
+            <span [class.settings-page__status--inactive]="!user.is_active">
+              {{ user.is_active ? 'Активен' : 'Деактивирован' }}
+            </span>
+            <span>{{ user.created_at || '—' }}</span>
+            <button
+              class="btn"
+              type="button"
+              (click)="deactivateUser(user)"
+              [disabled]="deletingUserId === user.id || !user.is_active || user.id === currentUser?.user_id"
+            >
+              {{
+                user.id === currentUser?.user_id
+                  ? 'Это вы'
+                  : deletingUserId === user.id
+                    ? 'Удаляем...'
+                    : user.is_active
+                      ? 'Деактивировать'
+                      : 'Недоступно'
+              }}
+            </button>
+          </div>
+        </div>
+      } @else {
+        <div class="settings-page__empty">Пользователи не найдены.</div>
+      }
+    </section>
+  }
 </div>

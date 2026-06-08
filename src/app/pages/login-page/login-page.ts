@@ -17,7 +17,7 @@ export class LoginPageComponent {
   showPassword = false;
 
   form = new FormGroup({
-    email: new FormControl('', [Validators.required, Validators.email]),
+    login: new FormControl('', [Validators.required]),
     password: new FormControl('', [Validators.required, Validators.minLength(6)]),
   });
 
@@ -32,11 +32,11 @@ export class LoginPageComponent {
     this.loading = true;
     this.error = null;
 
-    const email = this.form.value.email ?? '';
+    const login = this.form.value.login ?? '';
     const password = this.form.value.password ?? '';
 
     try {
-      await this.auth.login(email, password);
+      await this.auth.login(login, password);
       await this.router.navigateByUrl('/dashboard', { replaceUrl: true });
     } catch (e: any) {
       this.error = e?.message ?? 'Ошибка входа';

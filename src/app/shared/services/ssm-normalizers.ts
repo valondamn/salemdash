@@ -1,11 +1,16 @@
 import {
+  AddUserResponse,
+  AuthUser,
   EpisodeInfo,
   InstagramAccount,
   InstagramAccountApiItem,
+  LoginResponse,
   ProjectInfoApiItem,
   ProjectInfoApiResponse,
   Project,
   ProjectAccountOption,
+  RoleOption,
+  SystemUser,
   TikTokAccountTotals,
   TikTokAccountTotalsApiItem,
   TikTokTotal,
@@ -39,6 +44,54 @@ function pickString(...values: any[]): string | undefined {
   }
 
   return undefined;
+}
+
+export function extractAuthToken(response: LoginResponse | null | undefined): string | null {
+  const raw = response as Record<string, any> | null | undefined;
+  const token = pickString(
+    response?.token,
+    response?.access_token,
+    response?.jwt,
+    raw?.['data']?.token,
+    raw?.['data']?.access_token,
+    raw?.['data']?.jwt
+  );
+
+  return token ?? null;
+}
+
+export function normalizeAuthUser(user: Partial<AuthUser> | null | undefined): AuthUser {
+  const raw = user as Record<string, any> | null | undefined;
+  return {
+    user_id: pickNumber(user?.user_id, raw?.['id']) ?? 0,
+    login: pickString(user?.login, raw?.['username']) ?? '',
+    role: pickString(user?.role, raw?.['role_code']) ?? 'user',
+  };
+}
+
+export function normalizeRoleOption(role: Partial<RoleOption> | null | undefined): RoleOption {
+  return {
+    id: pickNumber(role?.id) ?? 0,
+    code: pickString(role?.code) ?? 'user',
+    name: pickString(role?.name) ?? 'Пользователь',
+  };
+}
+
+export function normalizeSystemUser(user: Partial<SystemUser> | null | undefined): SystemUser {
+  const raw = user as Record<string, any> | null | undefined;
+  const isActive = raw?.['is_active'];
+  return {
+    id: pickNumber(user?.id, raw?.['user_id']) ?? 0,
+    login: pickString(user?.login, raw?.['username']) ?? '',
+    role: pickString(user?.role, raw?.['role_code']) ?? 'user',
+    is_active: isActive == null ? false : Boolean(Number(isActive) || isActive),
+    created_at: pickString(user?.created_at) ?? '',
+  };
+}
+
+export function extractCreatedUserId(response: AddUserResponse | null | undefined): number | null {
+  const raw = response as Record<string, any> | null | undefined;
+  return pickNumber(response?.id, response?.user_id, raw?.['data']?.id, raw?.['data']?.user_id) ?? null;
 }
 
 function normalizeProjectInfoItem(item: ProjectInfoApiItem): EpisodeInfo {

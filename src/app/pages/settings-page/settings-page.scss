@@ -21,6 +21,8 @@
 
 .settings-page__card {
   padding: 14px;
+  display: grid;
+  gap: 16px;
 }
 
 .settings-page__row {
@@ -32,6 +34,13 @@
 
 .settings-page__label {
   font-weight: 800;
+}
+
+.settings-page__section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .settings-page__hint {
@@ -49,6 +58,99 @@
   border-color: transparent;
 }
 
+.settings-page__identity {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.settings-page__identity-item,
+.settings-page__field {
+  display: grid;
+  gap: 6px;
+}
+
+.settings-page__meta-label {
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.settings-page__form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.settings-page__input {
+  width: 100%;
+  min-height: 44px;
+  padding: 11px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  outline: none;
+}
+
+.settings-page__input:focus {
+  border-color: rgba(79, 140, 255, 0.6);
+  box-shadow: 0 0 0 4px rgba(79, 140, 255, 0.12);
+}
+
+.settings-page__action {
+  min-height: 44px;
+}
+
+.settings-page__users {
+  display: grid;
+  gap: 10px;
+}
+
+.settings-page__users-head,
+.settings-page__user-row {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.settings-page__users-head {
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.settings-page__user-row {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.settings-page__user-login {
+  font-weight: 700;
+}
+
+.settings-page__status--inactive {
+  color: rgba(255, 91, 110, 0.9);
+}
+
+.settings-page__empty {
+  color: var(--muted);
+}
+
+.settings-page__error {
+  border: 1px solid rgba(255, 91, 110, 0.35);
+  background: rgba(255, 91, 110, 0.1);
+  color: rgba(255, 255, 255, 0.92);
+  padding: 10px 12px;
+  border-radius: 12px;
+}
+
 @media (max-width: 700px) {
   .settings-page__row {
     flex-direction: column;
@@ -61,5 +163,16 @@
 
   .settings-page__switch .btn {
     flex: 1;
+  }
+
+  .settings-page__identity,
+  .settings-page__form,
+  .settings-page__users-head,
+  .settings-page__user-row {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-page__users-head {
+    display: none;
   }
 }

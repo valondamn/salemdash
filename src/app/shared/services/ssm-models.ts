@@ -260,6 +260,67 @@ export type TikTokTotal = {
   total_views: number;
 };
 
+export type UserRoleCode = 'super_user' | 'editor' | 'user';
+
+export type AuthUser = {
+  user_id: number;
+  login: string;
+  role: UserRoleCode | string;
+};
+
+export type LoginPayload = {
+  login: string;
+  password: string;
+};
+
+export type LoginResponse = {
+  success?: boolean;
+  token?: string;
+  access_token?: string;
+  jwt?: string;
+  user?: Partial<AuthUser>;
+  [key: string]: any;
+};
+
+export type RoleOption = {
+  id: number;
+  code: UserRoleCode | string;
+  name: string;
+};
+
+export type RoleListResponse = {
+  success?: boolean;
+  roles?: RoleOption[];
+  [key: string]: any;
+};
+
+export type SystemUser = {
+  id: number;
+  login: string;
+  role: UserRoleCode | string;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type CurrentUserResponse = {
+  success?: boolean;
+  user?: Partial<AuthUser>;
+  [key: string]: any;
+};
+
+export type AddUserPayload = {
+  login: string;
+  password: string;
+  role: UserRoleCode | string;
+};
+
+export type AddUserResponse = {
+  success?: boolean;
+  id?: number;
+  user_id?: number;
+  [key: string]: any;
+};
+
 export type TikTokAccountTotalsApiItem = {
   account_id?: number | string;
   channel_name?: string;

@@ -7,10 +7,10 @@
 
     <form [formGroup]="form" (ngSubmit)="submit()" class="login-page__form">
       <label class="login-page__field">
-        <span class="login-page__label">Почта</span>
-        <input class="login-page__input" type="email" formControlName="email" placeholder="почта@пример.рф" />
-        <small class="login-page__error" *ngIf="form.controls.email.touched && form.controls.email.invalid">
-          Введите корректную почту
+        <span class="login-page__label">Логин</span>
+        <input class="login-page__input" type="text" formControlName="login" placeholder="admin" />
+        <small class="login-page__error" *ngIf="form.controls.login.touched && form.controls.login.invalid">
+          Введите логин
         </small>
       </label>
 

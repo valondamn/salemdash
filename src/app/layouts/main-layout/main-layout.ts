@@ -23,6 +23,10 @@ export class MainLayoutComponent {
 
   constructor(private auth: AuthService, private router: Router) {}
 
+  get currentUser() {
+    return this.auth.user();
+  }
+
   logout() {
     this.auth.logout();
     this.router.navigateByUrl('/login');

@@ -20,6 +20,12 @@
       <div class="main-layout__title">Salem</div>
 
       <div class="main-layout__actions">
+        @if (currentUser; as user) {
+          <div class="main-layout__user-chip">
+            <span class="main-layout__user-name">{{ user.login }}</span>
+            <span class="main-layout__user-role">{{ user.role }}</span>
+          </div>
+        }
       </div>
     </header>
 

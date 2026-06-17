@@ -13,6 +13,8 @@ import {
   SystemUser,
   TikTokAccountTotals,
   TikTokAccountTotalsApiItem,
+  TikTokPeriodMetric,
+  TikTokPeriodMetricApiItem,
   TikTokTotal,
   TikTokTotalApiResponse,
   UnifiedVisitsRow,
@@ -25,6 +27,10 @@ import {
   YandexTotalApiResponse,
   YoutubeChannel,
   YoutubeChannelApiItem,
+  YoutubeReleaseMetric,
+  YoutubeReleaseMetricApiItem,
+  YoutubeReleasePeriod,
+  YoutubeReleasePeriodApiResponse,
 } from './ssm-models';
 
 function pickNumber(...values: any[]): number | undefined {
@@ -162,6 +168,35 @@ export function normalizeYoutubeChannel(item: YoutubeChannelApiItem): YoutubeCha
   };
 }
 
+export function normalizeYoutubeReleaseMetric(item: YoutubeReleaseMetricApiItem): YoutubeReleaseMetric {
+  return {
+    project_name: pickString(item.ProjectName) ?? '',
+    channel_name: pickString(item.channel_name) ?? 'YouTube',
+    metric_date: pickString(item.metric_date) ?? '',
+    views: pickNumber(item.views) ?? 0,
+    likes: pickNumber(item.likes) ?? 0,
+    comments: pickNumber(item.comments) ?? 0,
+    subscribers_gained: pickNumber(item.subscribers_gained) ?? 0,
+    subscribers_lost: pickNumber(item.subscribers_lost) ?? 0,
+    subscribers_net: pickNumber(item.subscribers_net) ?? 0,
+  };
+}
+
+export function normalizeYoutubeReleasePeriod(resp: YoutubeReleasePeriodApiResponse): YoutubeReleasePeriod {
+  const items = Array.isArray(resp?.items) ? resp.items : [];
+
+  return {
+    count: pickNumber(resp?.count) ?? items.length,
+    date_from: pickString(resp?.date_from) ?? '',
+    date_to: pickString(resp?.date_to) ?? '',
+    n: pickNumber(resp?.n) ?? 0,
+    period: pickString(resp?.period) ?? '',
+    project_id: pickNumber(resp?.project_id) ?? 0,
+    type: pickString(resp?.type) ?? '',
+    items: items.map((item) => normalizeYoutubeReleaseMetric(item)),
+  };
+}
+
 export function normalizeInstagramAccount(item: InstagramAccountApiItem): InstagramAccount {
   return {
     id: pickString(item.Instagram_ID) ?? '',
@@ -179,6 +214,10 @@ export function normalizeInstagramAccount(item: InstagramAccountApiItem): Instag
     views_day: pickNumber(item.Instagram_Views_Day) ?? 0,
     views_total: pickNumber(item.Instagram_Views_Total) ?? 0,
   };
+}
+
+export function normalizeInstagramPeriodDaily(items: InstagramAccountApiItem[] | null | undefined): InstagramAccount[] {
+  return (items ?? []).map((item) => normalizeInstagramAccount(item));
 }
 
 export function normalizeAccountOption(item: any): ProjectAccountOption {
@@ -254,6 +293,32 @@ export function normalizeTikTokAccountTotals(items: TikTokAccountTotalsApiItem[]
     total_views: pickNumber(item.total_views) ?? 0,
     updated_at: pickString(item.updated_at) ?? '',
   }));
+}
+
+export function normalizeTikTokPeriodMetric(item: TikTokPeriodMetricApiItem): TikTokPeriodMetric {
+  return {
+    account_id: pickNumber(item.account_id) ?? 0,
+    channel_name: pickString(item.channel_name) ?? 'TikTok',
+    channel_url: pickString(item.channel_url) ?? '',
+    collected_at: pickString(item.collected_at) ?? '',
+    stat_date: pickString(item.stat_date) ?? '',
+    followers: pickNumber(item.followers) ?? 0,
+    followers_growth: pickNumber(item.followers_growth) ?? 0,
+    profile_likes: pickNumber(item.profile_likes) ?? 0,
+    total_comments: pickNumber(item.total_comments) ?? 0,
+    total_likes: pickNumber(item.total_likes) ?? 0,
+    total_shares: pickNumber(item.total_shares) ?? 0,
+    total_videos: pickNumber(item.total_videos) ?? 0,
+    total_views: pickNumber(item.total_views) ?? 0,
+    comments_growth: pickNumber(item.comments_growth) ?? 0,
+    likes_growth: pickNumber(item.likes_growth) ?? 0,
+    shares_growth: pickNumber(item.shares_growth) ?? 0,
+    views_growth: pickNumber(item.views_growth) ?? 0,
+  };
+}
+
+export function normalizeTikTokPeriodMetrics(items: TikTokPeriodMetricApiItem[] | null | undefined): TikTokPeriodMetric[] {
+  return (items ?? []).map((item) => normalizeTikTokPeriodMetric(item));
 }
 
 export function normalizeVisits(resp: VisitsResponse): UnifiedVisitsRow[] {

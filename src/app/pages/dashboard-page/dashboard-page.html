@@ -7,22 +7,42 @@
       <p class="dashboard-page__subtitle">Общий срез по всем платформам.</p>
     </div>
 
-    <div class="dashboard-page__controls" *ngIf="activePlatform() === 'youtube'">
-      <select
-        class="dashboard-page__select"
-        [(ngModel)]="selectedProjectId"
-        (change)="onProjectChange()"
-        [disabled]="loadingProjects()"
-      >
-        <option value="" disabled>Выберите проект...</option>
-        <option *ngFor="let p of projects()" [value]="p.id">
-          {{ p.name || p.utm_name || ('Проект ' + p.id) }}
-        </option>
-      </select>
+    <div class="dashboard-page__actions">
+      <div class="dashboard-page__period">
+        <label class="dashboard-page__date-field">
+          <span>С</span>
+          <input type="date" [(ngModel)]="dateFrom" />
+        </label>
+        <label class="dashboard-page__date-field">
+          <span>По</span>
+          <input type="date" [(ngModel)]="dateTo" />
+        </label>
+        <button class="btn dashboard-page__period-btn" (click)="applyPeriod()" [disabled]="activeLoading">
+          Применить
+        </button>
+        <button class="btn dashboard-page__period-btn dashboard-page__period-btn--ghost" (click)="resetPeriod()" [disabled]="activeLoading && !periodActive">
+          Сбросить
+        </button>
+        <span class="dashboard-page__period-badge" *ngIf="periodActive">{{ periodLabel }}</span>
+      </div>
 
-      <button class="btn dashboard-page__refresh" (click)="refreshProjectInfo()" [disabled]="loadingInfo() || !selectedProjectId">
-        {{ loadingInfo() ? 'Обновляем...' : 'Обновить' }}
-      </button>
+      <div class="dashboard-page__controls" *ngIf="activePlatform() === 'youtube'">
+        <select
+          class="dashboard-page__select"
+          [(ngModel)]="selectedProjectId"
+          (change)="onProjectChange()"
+          [disabled]="loadingProjects()"
+        >
+          <option value="" disabled>Выберите проект...</option>
+          <option *ngFor="let p of projects()" [value]="p.id">
+            {{ p.name || p.utm_name || ('Проект ' + p.id) }}
+          </option>
+        </select>
+
+        <button class="btn dashboard-page__refresh" (click)="refreshProjectInfo()" [disabled]="loadingInfo() || !selectedProjectId">
+          {{ loadingInfo() ? 'Обновляем...' : 'Обновить' }}
+        </button>
+      </div>
     </div>
   </header>
 
@@ -105,31 +125,31 @@
 
     <section class="dashboard-page__stats">
       <div class="dashboard-page__stat card">
-        <div class="dashboard-page__label">Эпизоды</div>
+        <div class="dashboard-page__label">{{ periodActive ? 'Дни' : 'Эпизоды' }}</div>
         <div class="dashboard-page__value" [countUp]="episodes().length"></div>
-        <div class="dashboard-page__hint">в проекте</div>
+        <div class="dashboard-page__hint">{{ projectCountHint }}</div>
       </div>
       <div class="dashboard-page__stat card">
         <div class="dashboard-page__label">Просмотры</div>
         <div class="dashboard-page__value" [countUp]="totalViews"></div>
-        <div class="dashboard-page__hint">сумма</div>
+        <div class="dashboard-page__hint">{{ periodActive ? 'за период' : 'сумма' }}</div>
       </div>
       <div class="dashboard-page__stat card">
         <div class="dashboard-page__label">Лайки</div>
         <div class="dashboard-page__value" [countUp]="totalLikes"></div>
-        <div class="dashboard-page__hint">сумма</div>
+        <div class="dashboard-page__hint">{{ periodActive ? 'за период' : 'сумма' }}</div>
       </div>
       <div class="dashboard-page__stat card">
         <div class="dashboard-page__label">Комментарии</div>
         <div class="dashboard-page__value" [countUp]="totalComments"></div>
-        <div class="dashboard-page__hint">сумма</div>
+        <div class="dashboard-page__hint">{{ periodActive ? 'за период' : 'сумма' }}</div>
       </div>
     </section>
 
     <section class="dashboard-page__panel card">
       <div class="dashboard-page__panel-head">
         <div>
-          <div class="dashboard-page__panel-title">Эпизоды</div>
+          <div class="dashboard-page__panel-title">{{ projectPanelTitle }}</div>
           <p class="dashboard-page__panel-copy"><strong>{{ selectedProjectLabel }}</strong></p>
         </div>
         <div class="dashboard-page__muted" *ngIf="loadingInfo()">Загружаем данные...</div>
@@ -140,12 +160,12 @@
       </div>
 
       <div class="dashboard-page__empty" *ngIf="!loadingInfo() && !hasEpisodes">
-        По выбранному проекту пока нет данных по эпизодам. Попробуйте другой проект или обновите данные позже.
+        По выбранному проекту пока нет данных{{ periodActive ? ' за выбранный период.' : ' по эпизодам.' }}
       </div>
 
       <div class="dashboard-page__table" *ngIf="hasEpisodes">
         <div class="dashboard-page__row dashboard-page__row--head">
-          <div>Эпизод</div>
+          <div>{{ periodActive ? 'Дата' : 'Эпизод' }}</div>
           <div>Просмотры</div>
           <div>Лайки</div>
           <div>Комментарии</div>
@@ -182,22 +202,22 @@
         <div class="dashboard-page__stat card">
           <div class="dashboard-page__label">Подписчики</div>
           <div class="dashboard-page__value" [countUp]="totalChannelSubscribers"></div>
-          <div class="dashboard-page__hint">по всем</div>
+          <div class="dashboard-page__hint">{{ youtubeTotalsHint }}</div>
         </div>
         <div class="dashboard-page__stat card">
           <div class="dashboard-page__label">Просмотры</div>
           <div class="dashboard-page__value" [countUp]="totalChannelViews"></div>
-          <div class="dashboard-page__hint">по всем</div>
+          <div class="dashboard-page__hint">{{ youtubeTotalsHint }}</div>
         </div>
         <div class="dashboard-page__stat card">
           <div class="dashboard-page__label">Лайки</div>
           <div class="dashboard-page__value" [countUp]="totalChannelLikes"></div>
-          <div class="dashboard-page__hint">по всем</div>
+          <div class="dashboard-page__hint">{{ youtubeTotalsHint }}</div>
         </div>
         <div class="dashboard-page__stat card">
           <div class="dashboard-page__label">Комментарии</div>
           <div class="dashboard-page__value" [countUp]="totalChannelComments"></div>
-          <div class="dashboard-page__hint">по всем</div>
+          <div class="dashboard-page__hint">{{ youtubeTotalsHint }}</div>
         </div>
       </section>
 
@@ -212,11 +232,11 @@
       <div class="dashboard-page__table dashboard-page__table--channels" *ngIf="channels().length">
         <div class="dashboard-page__row dashboard-page__row--head dashboard-page__row--channels">
           <div>Канал</div>
-          <div>Подписчики</div>
+          <div>{{ youtubeSubscribersLabel }}</div>
           <div>Просмотры</div>
           <div>Лайки</div>
           <div>Комментарии</div>
-          <div>За квартал</div>
+          <div>{{ youtubeLastColumnLabel }}</div>
         </div>
         <div class="dashboard-page__row dashboard-page__row--channels" *ngFor="let channel of topChannels()">
           <div class="dashboard-page__episode">
@@ -256,17 +276,17 @@
       <div class="dashboard-page__stat card">
         <div class="dashboard-page__label">Просмотры</div>
         <div class="dashboard-page__value" [countUp]="totalInstagramViews"></div>
-        <div class="dashboard-page__hint">суммарно</div>
+        <div class="dashboard-page__hint">{{ instagramTotalsHint }}</div>
       </div>
       <div class="dashboard-page__stat card">
         <div class="dashboard-page__label">Лайки</div>
         <div class="dashboard-page__value" [countUp]="totalInstagramLikes"></div>
-        <div class="dashboard-page__hint">суммарно</div>
+        <div class="dashboard-page__hint">{{ instagramTotalsHint }}</div>
       </div>
       <div class="dashboard-page__stat card">
         <div class="dashboard-page__label">Сохранения</div>
         <div class="dashboard-page__value" [countUp]="totalInstagramSaves"></div>
-        <div class="dashboard-page__hint">суммарно</div>
+        <div class="dashboard-page__hint">{{ instagramTotalsHint }}</div>
       </div>
     </section>
 
@@ -385,17 +405,17 @@
       <div class="dashboard-page__stat card">
         <div class="dashboard-page__label">Просмотры</div>
         <div class="dashboard-page__value" [countUp]="tiktokTotal.total_views"></div>
-        <div class="dashboard-page__hint">суммарно</div>
+        <div class="dashboard-page__hint">{{ tiktokTotalsHint }}</div>
       </div>
       <div class="dashboard-page__stat card">
         <div class="dashboard-page__label">Лайки</div>
         <div class="dashboard-page__value" [countUp]="tiktokTotal.total_likes"></div>
-        <div class="dashboard-page__hint">по видео</div>
+        <div class="dashboard-page__hint">{{ periodActive ? 'прирост за период' : 'по видео' }}</div>
       </div>
       <div class="dashboard-page__stat card">
         <div class="dashboard-page__label">Шеры</div>
         <div class="dashboard-page__value" [countUp]="tiktokTotal.total_shares"></div>
-        <div class="dashboard-page__hint">суммарно</div>
+        <div class="dashboard-page__hint">{{ tiktokTotalsHint }}</div>
       </div>
       <div class="dashboard-page__stat card">
         <div class="dashboard-page__label">Профиль лайки</div>

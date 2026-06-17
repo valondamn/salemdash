@@ -203,6 +203,54 @@ export type YoutubeChannel = {
   quarter_views_count: number;
 };
 
+export type YoutubeReleaseMetricApiItem = {
+  ProjectName?: string;
+  channel_name?: string;
+  comments?: number | string;
+  likes?: number | string;
+  metric_date?: string;
+  subscribers_gained?: number | string;
+  subscribers_lost?: number | string;
+  subscribers_net?: number | string;
+  views?: number | string;
+  [key: string]: any;
+};
+
+export type YoutubeReleasePeriodApiResponse = {
+  count?: number | string;
+  date_from?: string;
+  date_to?: string;
+  items?: YoutubeReleaseMetricApiItem[];
+  n?: number | string;
+  period?: string;
+  project_id?: number | string;
+  type?: string;
+  [key: string]: any;
+};
+
+export type YoutubeReleaseMetric = {
+  project_name: string;
+  channel_name: string;
+  metric_date: string;
+  views: number;
+  likes: number;
+  comments: number;
+  subscribers_gained: number;
+  subscribers_lost: number;
+  subscribers_net: number;
+};
+
+export type YoutubeReleasePeriod = {
+  count: number;
+  date_from: string;
+  date_to: string;
+  n: number;
+  period: string;
+  project_id: number;
+  type: string;
+  items: YoutubeReleaseMetric[];
+};
+
 export type InstagramAccountApiItem = {
   Instagram_Comments_Day?: number | string;
   Instagram_Comments_Total?: number | string;
@@ -236,6 +284,47 @@ export type InstagramAccount = {
   saved_total: number;
   views_day: number;
   views_total: number;
+};
+
+export type TikTokPeriodMetricApiItem = {
+  account_id?: number | string;
+  channel_name?: string;
+  channel_url?: string;
+  collected_at?: string;
+  comments_growth?: number | string;
+  followers?: number | string;
+  followers_growth?: number | string;
+  likes_growth?: number | string;
+  profile_likes?: number | string;
+  shares_growth?: number | string;
+  stat_date?: string;
+  total_comments?: number | string;
+  total_likes?: number | string;
+  total_shares?: number | string;
+  total_videos?: number | string;
+  total_views?: number | string;
+  views_growth?: number | string;
+  [key: string]: any;
+};
+
+export type TikTokPeriodMetric = {
+  account_id: number;
+  channel_name: string;
+  channel_url: string;
+  collected_at: string;
+  stat_date: string;
+  followers: number;
+  followers_growth: number;
+  profile_likes: number;
+  total_comments: number;
+  total_likes: number;
+  total_shares: number;
+  total_videos: number;
+  total_views: number;
+  comments_growth: number;
+  likes_growth: number;
+  shares_growth: number;
+  views_growth: number;
 };
 
 export type TikTokTotalApiResponse = {

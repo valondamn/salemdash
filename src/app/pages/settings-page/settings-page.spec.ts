@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ToastrService } from 'ngx-toastr';
 
 import { SettingsPageComponent } from './settings-page';
 
@@ -9,6 +10,9 @@ describe('SettingsPageComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [SettingsPageComponent],
+      providers: [
+        { provide: ToastrService, useValue: { success: () => undefined, error: () => undefined } },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(SettingsPageComponent);

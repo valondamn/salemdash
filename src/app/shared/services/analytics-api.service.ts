@@ -1,27 +1,32 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, catchError, map, shareReplay, throwError, timeout } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import {
   InstagramAccountApiItem,
   TikTokAccountTotalsApiItem,
+  TikTokPeriodMetricApiItem,
   TikTokTotalApiResponse,
   VisitsResponse,
   YandexProjectAnalyticsApiResponse,
   YandexProjectsGroupItemApi,
   YandexTotalApiResponse,
   YoutubeChannelApiItem,
+  YoutubeReleasePeriodApiResponse,
 } from './ssm-models';
 import {
   normalizeInstagramAccount,
+  normalizeInstagramPeriodDaily,
   normalizeTikTokAccountTotals,
+  normalizeTikTokPeriodMetrics,
   normalizeTikTokTotal,
   normalizeVisits,
   normalizeYandexProjectAnalytics,
   normalizeYandexProjectsGroup,
   normalizeYandexTotal,
   normalizeYoutubeChannel,
+  normalizeYoutubeReleasePeriod,
 } from './ssm-normalizers';
 
 @Injectable({ providedIn: 'root' })
@@ -85,6 +90,28 @@ export class AnalyticsApiService {
     return this.youtubeChannels$;
   }
 
+  getYoutubeReleaseMetrics(dateFrom?: string, dateTo?: string) {
+    return this.http
+      .get<YoutubeReleasePeriodApiResponse>(`${this.baseUrl}/ssm/releases_for_1_DAY`, {
+        params: this.buildPeriodParams(dateFrom, dateTo),
+      })
+      .pipe(
+        timeout({ first: this.requestTimeoutMs }),
+        map((response) => normalizeYoutubeReleasePeriod(response))
+      );
+  }
+
+  getYoutubeProjectReleaseMetrics(projectId: number, dateFrom?: string, dateTo?: string) {
+    return this.http
+      .get<YoutubeReleasePeriodApiResponse>(`${this.baseUrl}/ssm/releases_for_project_${projectId}_1_DAY`, {
+        params: this.buildPeriodParams(dateFrom, dateTo),
+      })
+      .pipe(
+        timeout({ first: this.requestTimeoutMs }),
+        map((response) => normalizeYoutubeReleasePeriod(response))
+      );
+  }
+
   getInstagramAccounts(force = false) {
     if (!this.instagramAccounts$ || force) {
       this.instagramAccounts$ = this.http
@@ -101,6 +128,17 @@ export class AnalyticsApiService {
     }
 
     return this.instagramAccounts$;
+  }
+
+  getInstagramPeriodDaily(dateFrom: string, dateTo: string) {
+    return this.http
+      .get<InstagramAccountApiItem[]>(`${this.baseUrl}/ssm/salem_dune/instagram/period_daily`, {
+        params: this.buildPeriodParams(dateFrom, dateTo),
+      })
+      .pipe(
+        timeout({ first: this.requestTimeoutMs }),
+        map((items) => normalizeInstagramPeriodDaily(items))
+      );
   }
 
   getYandexProjects(force = false) {
@@ -194,6 +232,31 @@ export class AnalyticsApiService {
     }
 
     return this.tiktokTotalsByAccount$;
+  }
+
+  getTikTokStatsByPeriod(dateFrom: string, dateTo: string) {
+    return this.http
+      .get<TikTokPeriodMetricApiItem[]>(`${this.baseUrl}/ssm/tiktok_accounts/stats_by_period`, {
+        params: this.buildPeriodParams(dateFrom, dateTo),
+      })
+      .pipe(
+        timeout({ first: this.requestTimeoutMs }),
+        map((items) => normalizeTikTokPeriodMetrics(items))
+      );
+  }
+
+  private buildPeriodParams(dateFrom?: string, dateTo?: string) {
+    let params = new HttpParams();
+
+    if (dateFrom) {
+      params = params.set('date_from', dateFrom);
+    }
+
+    if (dateTo) {
+      params = params.set('date_to', dateTo);
+    }
+
+    return params;
   }
 
   private buildYoutubeChannels(items: YoutubeChannelApiItem[] | null | undefined) {

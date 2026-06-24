@@ -125,7 +125,7 @@
 
     <section class="dashboard-page__stats">
       <div class="dashboard-page__stat card">
-        <div class="dashboard-page__label">{{ periodActive ? 'Дни' : 'Эпизоды' }}</div>
+        <div class="dashboard-page__label">{{ periodActive ? 'Ролики' : 'Эпизоды' }}</div>
         <div class="dashboard-page__value" [countUp]="episodes().length"></div>
         <div class="dashboard-page__hint">{{ projectCountHint }}</div>
       </div>
@@ -160,12 +160,26 @@
       </div>
 
       <div class="dashboard-page__empty" *ngIf="!loadingInfo() && !hasEpisodes">
-        По выбранному проекту пока нет данных{{ periodActive ? ' за выбранный период.' : ' по эпизодам.' }}
+        По выбранному проекту пока нет данных{{ periodActive ? ' по роликам.' : ' по эпизодам.' }}
+      </div>
+
+      <section class="dashboard-page__period-chart" *ngIf="periodActive && hasProjectPeriodMetrics">
+        <div class="dashboard-page__period-chart-head">
+          <div>
+            <div class="dashboard-page__panel-title">Динамика по датам</div>
+            <p class="dashboard-page__panel-copy">Просмотры, лайки и комментарии за {{ periodLabel }}.</p>
+          </div>
+        </div>
+        <app-project-period-line-chart [items]="projectPeriodMetrics()"></app-project-period-line-chart>
+      </section>
+
+      <div class="dashboard-page__empty" *ngIf="periodActive && !loadingInfo() && !hasProjectPeriodMetrics">
+        По выбранному проекту нет дневной динамики за {{ periodLabel }}.
       </div>
 
       <div class="dashboard-page__table" *ngIf="hasEpisodes">
         <div class="dashboard-page__row dashboard-page__row--head">
-          <div>{{ periodActive ? 'Дата' : 'Эпизод' }}</div>
+          <div>Эпизод</div>
           <div>Просмотры</div>
           <div>Лайки</div>
           <div>Комментарии</div>

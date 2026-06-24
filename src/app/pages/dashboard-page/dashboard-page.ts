@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, OnInit, signal, computed } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, signal } from '@angular/core';
 import { NgFor, NgIf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CountUpDirective } from '../../shared/directives/count-up.directive';
+import { ProjectPeriodLineChartComponent } from '../../shared/ui/project-period-line-chart/project-period-line-chart';
 import { forkJoin } from 'rxjs';
 import {
   TikTokAccountTotals,
@@ -21,7 +22,7 @@ import { AnalyticsApiService } from '../../shared/services/analytics-api.service
 @Component({
   selector: 'app-dashboard-page',
   standalone: true,
-  imports: [NgFor, NgIf, FormsModule, CountUpDirective],
+  imports: [NgFor, NgIf, FormsModule, CountUpDirective, ProjectPeriodLineChartComponent],
   templateUrl: './dashboard-page.html',
   styleUrl: './dashboard-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -41,6 +42,7 @@ export class DashboardPageComponent implements OnInit {
   appliedDateTo = '';
 
   episodes = signal<EpisodeInfo[]>([]);
+  projectPeriodMetrics = signal<YoutubeReleaseMetric[]>([]);
   totalViews = 0;
   totalLikes = 0;
   totalComments = 0;
@@ -133,6 +135,10 @@ export class DashboardPageComponent implements OnInit {
     return this.episodes().length > 0;
   }
 
+  get hasProjectPeriodMetrics() {
+    return this.projectPeriodMetrics().length > 0;
+  }
+
   get periodActive() {
     return Boolean(this.appliedDateFrom && this.appliedDateTo);
   }
@@ -142,11 +148,11 @@ export class DashboardPageComponent implements OnInit {
   }
 
   get projectPanelTitle() {
-    return this.periodActive ? 'Динамика проекта' : 'Эпизоды';
+    return this.periodActive ? 'Ролики проекта' : 'Эпизоды';
   }
 
   get projectCountHint() {
-    return this.periodActive ? 'дней в периоде' : 'в проекте';
+    return this.periodActive ? 'ролики проекта' : 'в проекте';
   }
 
   get youtubeTotalsHint() {
@@ -225,6 +231,7 @@ export class DashboardPageComponent implements OnInit {
     this.dateTo = '';
     this.appliedDateFrom = '';
     this.appliedDateTo = '';
+    this.projectPeriodMetrics.set([]);
     this.periodError.set(null);
 
     if (wasActive) {
@@ -247,9 +254,14 @@ export class DashboardPageComponent implements OnInit {
     this.error.set(null);
 
     if (this.periodActive) {
-      this.analyticsApi.getYoutubeProjectReleaseMetrics(id, this.appliedDateFrom, this.appliedDateTo).subscribe({
-        next: (response) => {
-          this.setProjectRows(this.projectPeriodRowsToEpisodes(response.items));
+      forkJoin({
+        period: this.analyticsApi.getYoutubeProjectReleaseMetrics(id, this.appliedDateFrom, this.appliedDateTo),
+        episodes: this.projectsApi.getProjectInfo(id, force),
+      }).subscribe({
+        next: ({ period, episodes }) => {
+          this.projectPeriodMetrics.set(period.items);
+          this.setProjectRows(episodes ?? []);
+          this.setProjectTotalsFromMetrics(period.items);
           this.loadingInfo.set(false);
         },
         error: (e: any) => {
@@ -262,6 +274,7 @@ export class DashboardPageComponent implements OnInit {
 
     this.projectsApi.getProjectInfo(id, force).subscribe({
       next: (rows) => {
+        this.projectPeriodMetrics.set([]);
         this.setProjectRows(rows ?? []);
         this.loadingInfo.set(false);
       },
@@ -430,17 +443,10 @@ export class DashboardPageComponent implements OnInit {
     this.totalComments = episodes.reduce((s, x) => s + (Number(x.youtube_comments) || 0), 0);
   }
 
-  private projectPeriodRowsToEpisodes(rows: YoutubeReleaseMetric[]): EpisodeInfo[] {
-    return rows.map((row, index) => ({
-      id: index + 1,
-      project_name: row.project_name,
-      episode_name: row.metric_date || row.project_name || 'День',
-      youtube_views: row.views,
-      youtube_likes: row.likes,
-      youtube_comments: row.comments,
-      release_date: row.metric_date,
-      youtube_release_date: row.metric_date,
-    }));
+  private setProjectTotalsFromMetrics(rows: YoutubeReleaseMetric[]) {
+    this.totalViews = rows.reduce((sum, row) => sum + row.views, 0);
+    this.totalLikes = rows.reduce((sum, row) => sum + row.likes, 0);
+    this.totalComments = rows.reduce((sum, row) => sum + row.comments, 0);
   }
 
   private setYoutubeChannels(items: YoutubeChannel[], periodMode: boolean) {

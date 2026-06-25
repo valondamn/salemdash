@@ -40,6 +40,23 @@
           </option>
         </select>
       </label>
+
+      <label class="control-item">
+        <span class="control-label">С</span>
+        <input class="select compact-select" type="date" [(ngModel)]="dateFrom" />
+      </label>
+
+      <label class="control-item">
+        <span class="control-label">По</span>
+        <input class="select compact-select" type="date" [(ngModel)]="dateTo" />
+      </label>
+
+      <div class="control-item">
+        <span class="control-label">Период</span>
+        <button class="btn accent-btn" type="button" (click)="applyPeriod()" [disabled]="currentLoading || loadingProjects">
+          Применить
+        </button>
+      </div>
     </div>
 
     <div class="control-grid compare-grid" *ngIf="activeSource === 'youtube' && mode === 'compare'">
@@ -62,24 +79,59 @@
           </option>
         </select>
       </label>
+
+      <label class="control-item">
+        <span class="control-label">С</span>
+        <input class="select compact-select" type="date" [(ngModel)]="dateFrom" />
+      </label>
+
+      <label class="control-item">
+        <span class="control-label">По</span>
+        <input class="select compact-select" type="date" [(ngModel)]="dateTo" />
+      </label>
+
+      <div class="control-item">
+        <span class="control-label">Период</span>
+        <button class="btn accent-btn" type="button" (click)="applyPeriod()" [disabled]="currentLoading || loadingProjects">
+          Применить
+        </button>
+      </div>
     </div>
 
     <div class="control-grid" *ngIf="activeSource === 'yandex' && mode === 'single'">
       <label class="control-item">
         <span class="control-label">Проект</span>
-        <select class="select compact-select" [(ngModel)]="yandexProjectId" (change)="onYandexProjectChange()">
+        <select class="select compact-select" [(ngModel)]="projectStatsId" (change)="onProjectStatsChange()">
           <option value="" disabled>{{ loadingProjects ? 'Загружаем проекты...' : 'Выберите проект...' }}</option>
+          <option value="all">Все проекты</option>
           <option *ngFor="let p of projects" [value]="p.id">
             {{ p.name || p.utm_name || ('Проект ' + p.id) }}
           </option>
         </select>
       </label>
+
+      <label class="control-item">
+        <span class="control-label">С</span>
+        <input class="select compact-select" type="date" [(ngModel)]="dateFrom" />
+      </label>
+
+      <label class="control-item">
+        <span class="control-label">По</span>
+        <input class="select compact-select" type="date" [(ngModel)]="dateTo" />
+      </label>
+
+      <div class="control-item">
+        <span class="control-label">Период</span>
+        <button class="btn accent-btn" type="button" (click)="applyPeriod()" [disabled]="currentLoading || loadingProjects">
+          Применить
+        </button>
+      </div>
     </div>
 
     <div class="control-grid compare-grid" *ngIf="activeSource === 'yandex' && mode === 'compare'">
       <label class="control-item">
         <span class="control-label">Проект A</span>
-        <select class="select compact-select accent-a" [(ngModel)]="yandexProjectAId" (change)="onCompareYandexProjectsChange()">
+        <select class="select compact-select accent-a" [(ngModel)]="projectStatsAId" (change)="onCompareProjectStatsChange()">
           <option value="" disabled>{{ loadingProjects ? 'Загружаем проекты...' : 'Проект A...' }}</option>
           <option *ngFor="let p of projects" [value]="p.id">
             {{ p.name || p.utm_name || ('Проект ' + p.id) }}
@@ -89,81 +141,99 @@
 
       <label class="control-item">
         <span class="control-label">Проект B</span>
-        <select class="select compact-select accent-b" [(ngModel)]="yandexProjectBId" (change)="onCompareYandexProjectsChange()">
+        <select class="select compact-select accent-b" [(ngModel)]="projectStatsBId" (change)="onCompareProjectStatsChange()">
           <option value="" disabled>{{ loadingProjects ? 'Загружаем проекты...' : 'Проект B...' }}</option>
           <option *ngFor="let p of projects" [value]="p.id">
             {{ p.name || p.utm_name || ('Проект ' + p.id) }}
           </option>
         </select>
       </label>
+
+      <label class="control-item">
+        <span class="control-label">С</span>
+        <input class="select compact-select" type="date" [(ngModel)]="dateFrom" />
+      </label>
+
+      <label class="control-item">
+        <span class="control-label">По</span>
+        <input class="select compact-select" type="date" [(ngModel)]="dateTo" />
+      </label>
+
+      <div class="control-item">
+        <span class="control-label">Период</span>
+        <button class="btn accent-btn" type="button" (click)="applyPeriod()" [disabled]="currentLoading || loadingProjects">
+          Применить
+        </button>
+      </div>
     </div>
 
-    <div class="control-grid" *ngIf="activeSource === 'tiktok' && mode === 'single'">
+    <div class="control-grid" *ngIf="(activeSource === 'instagram' || activeSource === 'tiktok') && mode === 'single'">
       <label class="control-item">
-        <span class="control-label">TikTok аккаунт</span>
-        <select class="select compact-select" [(ngModel)]="tiktokSingleId">
-          <option value="" disabled>Выберите аккаунт...</option>
-          <option *ngFor="let acc of tiktokAccounts" [value]="acc.account_id">
-            {{ acc.channel_name }}
+        <span class="control-label">Проект</span>
+        <select class="select compact-select" [(ngModel)]="projectStatsId" (change)="onProjectStatsChange()">
+          <option value="" disabled>{{ loadingProjects ? 'Загружаем проекты...' : 'Выберите проект...' }}</option>
+          <option value="all">Все проекты</option>
+          <option *ngFor="let p of projects" [value]="p.id">
+            {{ p.name || p.utm_name || ('Проект ' + p.id) }}
           </option>
         </select>
       </label>
+
+      <label class="control-item">
+        <span class="control-label">С</span>
+        <input class="select compact-select" type="date" [(ngModel)]="dateFrom" />
+      </label>
+
+      <label class="control-item">
+        <span class="control-label">По</span>
+        <input class="select compact-select" type="date" [(ngModel)]="dateTo" />
+      </label>
+
+      <div class="control-item">
+        <span class="control-label">Период</span>
+        <button class="btn accent-btn" type="button" (click)="applyPeriod()" [disabled]="currentLoading || loadingProjects">
+          Применить
+        </button>
+      </div>
     </div>
 
-    <div class="control-grid compare-grid" *ngIf="activeSource === 'tiktok' && mode === 'compare'">
+    <div class="control-grid compare-grid" *ngIf="(activeSource === 'instagram' || activeSource === 'tiktok') && mode === 'compare'">
       <label class="control-item">
-        <span class="control-label">Аккаунт A</span>
-        <select class="select compact-select accent-a" [(ngModel)]="tiktokCompareAId">
-          <option value="" disabled>Аккаунт A...</option>
-          <option *ngFor="let acc of tiktokAccounts" [value]="acc.account_id">
-            {{ acc.channel_name }}
+        <span class="control-label">Проект A</span>
+        <select class="select compact-select accent-a" [(ngModel)]="projectStatsAId" (change)="onCompareProjectStatsChange()">
+          <option value="" disabled>{{ loadingProjects ? 'Загружаем проекты...' : 'Проект A...' }}</option>
+          <option *ngFor="let p of projects" [value]="p.id">
+            {{ p.name || p.utm_name || ('Проект ' + p.id) }}
           </option>
         </select>
       </label>
 
       <label class="control-item">
-        <span class="control-label">Аккаунт B</span>
-        <select class="select compact-select accent-b" [(ngModel)]="tiktokCompareBId">
-          <option value="" disabled>Аккаунт B...</option>
-          <option *ngFor="let acc of tiktokAccounts" [value]="acc.account_id">
-            {{ acc.channel_name }}
-          </option>
-        </select>
-      </label>
-    </div>
-
-    <div class="control-grid" *ngIf="activeSource === 'instagram' && mode === 'single'">
-      <label class="control-item">
-        <span class="control-label">Instagram аккаунт</span>
-        <select class="select compact-select" [(ngModel)]="selectedInstagramId">
-          <option value="" disabled>Выберите аккаунт...</option>
-          <option *ngFor="let account of instagramAccounts" [value]="account.id">
-            {{ account.page_name }} (@{{ account.username }})
-          </option>
-        </select>
-      </label>
-    </div>
-
-    <div class="control-grid compare-grid" *ngIf="activeSource === 'instagram' && mode === 'compare'">
-      <label class="control-item">
-        <span class="control-label">Аккаунт A</span>
-        <select class="select compact-select accent-a" [(ngModel)]="instagramAId">
-          <option value="" disabled>Аккаунт A...</option>
-          <option *ngFor="let account of instagramAccounts" [value]="account.id">
-            {{ account.page_name }} (@{{ account.username }})
+        <span class="control-label">Проект B</span>
+        <select class="select compact-select accent-b" [(ngModel)]="projectStatsBId" (change)="onCompareProjectStatsChange()">
+          <option value="" disabled>{{ loadingProjects ? 'Загружаем проекты...' : 'Проект B...' }}</option>
+          <option *ngFor="let p of projects" [value]="p.id">
+            {{ p.name || p.utm_name || ('Проект ' + p.id) }}
           </option>
         </select>
       </label>
 
       <label class="control-item">
-        <span class="control-label">Аккаунт B</span>
-        <select class="select compact-select accent-b" [(ngModel)]="instagramBId">
-          <option value="" disabled>Аккаунт B...</option>
-          <option *ngFor="let account of instagramAccounts" [value]="account.id">
-            {{ account.page_name }} (@{{ account.username }})
-          </option>
-        </select>
+        <span class="control-label">С</span>
+        <input class="select compact-select" type="date" [(ngModel)]="dateFrom" />
       </label>
+
+      <label class="control-item">
+        <span class="control-label">По</span>
+        <input class="select compact-select" type="date" [(ngModel)]="dateTo" />
+      </label>
+
+      <div class="control-item">
+        <span class="control-label">Период</span>
+        <button class="btn accent-btn" type="button" (click)="applyPeriod()" [disabled]="currentLoading || loadingProjects">
+          Применить
+        </button>
+      </div>
     </div>
   </section>
 
@@ -231,61 +301,107 @@
     [summary]="getCompareSummary(youtubeCompareRows, getComparePrimaryLabel(), getCompareSecondaryLabel())"
   ></app-youtube-compare-stats>
 
-  <app-yandex-single-stats
-    *ngIf="activeSource === 'yandex' && mode === 'single' && hasYandexData"
-    [headline]="getSingleHeadline()"
-    [projectName]="yandexSingle?.project_name || ''"
-    [totalCount]="yandexSingle?.total_count || 0"
-    [totalKzCount]="yandexSingle?.total_kz_count || 0"
-    [urlCount]="yandexSingle?.url_count || 0"
-    [items]="yandexSingle?.items || []"
-  ></app-yandex-single-stats>
+  <section class="main-content project-platform-content" *ngIf="isProjectPlatformSource && mode === 'single' && projectStats as stats">
+    <section class="context-banner card">
+      <div>
+        <span class="eyebrow">Проектная статистика</span>
+        <h2>{{ getSingleHeadline() }}</h2>
+      </div>
+      <div class="context-chip">{{ periodLabel }}</div>
+    </section>
 
-  <app-yandex-compare-stats
-    *ngIf="activeSource === 'yandex' && mode === 'compare' && hasYandexData"
-    [rows]="yandexCompareRows"
-    [labels]="yandexCompareLabels"
-    [totalSeriesA]="yandexTotalSeriesA"
-    [totalSeriesB]="yandexTotalSeriesB"
-    [kzSeriesA]="yandexKzSeriesA"
-    [kzSeriesB]="yandexKzSeriesB"
-    [primaryLabel]="getComparePrimaryLabel()"
-    [secondaryLabel]="getCompareSecondaryLabel()"
-    [summary]="getCompareSummary(yandexCompareRows, getComparePrimaryLabel(), getCompareSecondaryLabel())"
-  ></app-yandex-compare-stats>
+    <section class="stats-grid project-platform-grid">
+      <div class="stat card accent-blue">
+        <div class="label">{{ stats.labels.primary }}</div>
+        <div class="value">{{ fmtCompact(stats.totals.primary) }}</div>
+        <div class="hint muted">за период</div>
+      </div>
 
-  <app-instagram-single-stats
-    *ngIf="activeSource === 'instagram' && mode === 'single' && hasInstagramData && selectedInstagramAccount as account"
-    [headline]="getSingleHeadline()"
-    [account]="account"
-  ></app-instagram-single-stats>
+      <div class="stat card accent-rose">
+        <div class="label">{{ stats.labels.secondary }}</div>
+        <div class="value">{{ fmtCompact(stats.totals.secondary) }}</div>
+        <div class="hint muted">за период</div>
+      </div>
 
-  <app-instagram-compare-stats
-    *ngIf="activeSource === 'instagram' && mode === 'compare' && hasInstagramData"
-    [rows]="instagramCompareRows"
-    [accountA]="instagramAccountA"
-    [accountB]="instagramAccountB"
-    [perPostLabels]="instagramPerPostLabels"
-    [perPostSeriesA]="instagramPerPostSeriesA"
-    [perPostSeriesB]="instagramPerPostSeriesB"
-    [primaryLabel]="getComparePrimaryLabel()"
-    [secondaryLabel]="getCompareSecondaryLabel()"
-    [summary]="getCompareSummary(instagramCompareRows, getComparePrimaryLabel(), getCompareSecondaryLabel())"
-  ></app-instagram-compare-stats>
+      <div class="stat card accent-amber">
+        <div class="label">{{ stats.labels.tertiary }}</div>
+        <div class="value">{{ fmtCompact(stats.totals.tertiary) }}</div>
+        <div class="hint muted">за период</div>
+      </div>
 
-  <app-tiktok-single-stats
-    *ngIf="activeSource === 'tiktok' && mode === 'single' && hasTikTokData && tiktokTotal"
-    [total]="tiktokTotal"
-    [accounts]="tiktokAccounts"
-  ></app-tiktok-single-stats>
+      <div class="stat card accent-emerald">
+        <div class="label">{{ stats.labels.quaternary }}</div>
+        <div class="value">{{ fmtCompact(stats.totals.quaternary) }}</div>
+        <div class="hint muted">за период</div>
+      </div>
+    </section>
 
-  <app-tiktok-compare-stats
-    *ngIf="activeSource === 'tiktok' && mode === 'compare' && hasTikTokCompareData"
-    [rows]="tiktokCompareRows"
-    [accountA]="tiktokCompareAccountA"
-    [accountB]="tiktokCompareAccountB"
-    [primaryLabel]="getTikTokComparePrimaryLabel()"
-    [secondaryLabel]="getTikTokCompareSecondaryLabel()"
-    [summary]="getCompareSummary(tiktokCompareRows, getTikTokComparePrimaryLabel(), getTikTokCompareSecondaryLabel())"
-  ></app-tiktok-compare-stats>
+    <section class="card panel">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">Детализация проекта</div>
+          <p class="panel-copy muted">{{ stats.rows.length }} строк за выбранный период.</p>
+        </div>
+        <div class="panel-tag">{{ activeSource }}</div>
+      </div>
+
+      <div class="table project-platform-table" *ngIf="stats.rows.length">
+        <div class="row headrow">
+          <div>Дата</div>
+          <div>Источник</div>
+          <div>{{ stats.labels.primary }}</div>
+          <div>{{ stats.labels.secondary }}</div>
+          <div>{{ stats.labels.tertiary }}</div>
+          <div>{{ stats.labels.quaternary }}</div>
+        </div>
+
+        <div class="row" *ngFor="let row of stats.rows.slice(0, 40)">
+          <div class="muted">{{ metricDateLabel(row) }}</div>
+          <div class="episode-cell">
+            <span class="ep">{{ projectStatRowTitle(row) }}</span>
+          </div>
+          <div>{{ fmtCompact(row.primary) }}</div>
+          <div>{{ fmtCompact(row.secondary) }}</div>
+          <div>{{ fmtCompact(row.tertiary) }}</div>
+          <div>{{ fmtCompact(row.quaternary) }}</div>
+        </div>
+      </div>
+
+      <div class="analytics-empty" *ngIf="!stats.rows.length">
+        <div class="analytics-empty__title">Нет строк за выбранный период</div>
+        <p class="analytics-empty__copy">Попробуйте другой проект или даты.</p>
+      </div>
+    </section>
+  </section>
+
+  <section class="main-content project-platform-content" *ngIf="isProjectPlatformSource && mode === 'compare' && (projectStatsA || projectStatsB)">
+    <section class="compare-hero card">
+      <div>
+        <span class="eyebrow">Сравнение проектов</span>
+        <h2>{{ getCompareSummary(projectStatsCompareRows, getComparePrimaryLabel(), getCompareSecondaryLabel()) }}</h2>
+      </div>
+      <div class="duel-chips">
+        <div class="project-chip chip-a">{{ getComparePrimaryLabel() }}</div>
+        <div class="project-chip chip-b">{{ getCompareSecondaryLabel() }}</div>
+      </div>
+    </section>
+
+    <section class="compare-metrics-grid project-platform-compare-grid">
+      <article
+        class="compare-metric card"
+        *ngFor="let row of projectStatsCompareRows"
+        [class.positive]="row.tone === 'positive'"
+        [class.negative]="row.tone === 'negative'"
+        [class.neutral]="row.tone === 'neutral'"
+      >
+        <div class="compare-metric-label">{{ row.label }}</div>
+        <div class="compare-metric-values">
+          <span class="compare-metric-main">{{ fmtCompact(row.a) }}</span>
+          <span class="compare-metric-vs">vs</span>
+          <span>{{ fmtCompact(row.b) }}</span>
+        </div>
+        <div class="delta-pill" [class]="row.tone">{{ row.delta === null ? '—' : row.delta.toFixed(1) + '%' }}</div>
+      </article>
+    </section>
+  </section>
 </div>

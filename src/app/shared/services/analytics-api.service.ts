@@ -18,11 +18,14 @@ import {
 import {
   normalizeInstagramAccount,
   normalizeInstagramPeriodDaily,
+  normalizeInstagramProjectStats,
   normalizeTikTokAccountTotals,
   normalizeTikTokPeriodMetrics,
+  normalizeTikTokProjectStats,
   normalizeTikTokTotal,
   normalizeVisits,
   normalizeYandexProjectAnalytics,
+  normalizeYandexDailyStats,
   normalizeYandexProjectsGroup,
   normalizeYandexTotal,
   normalizeYoutubeChannel,
@@ -198,6 +201,28 @@ export class AnalyticsApiService {
     return this.yandexByProjectCache.get(projectId)!;
   }
 
+  getYandexProjectDaily(projectId: number, dateFrom: string, dateTo: string) {
+    return this.http
+      .get<any>(`${this.baseUrl}/ssm/yandex_byprojectid_daily=${projectId}`, {
+        params: this.buildPeriodParams(dateFrom, dateTo),
+      })
+      .pipe(
+        timeout({ first: this.requestTimeoutMs }),
+        map((response) => normalizeYandexDailyStats(response, dateFrom, dateTo, projectId))
+      );
+  }
+
+  getYandexProjectsDaily(dateFrom: string, dateTo: string) {
+    return this.http
+      .get<any>(`${this.baseUrl}/ssm/yandex_projects_daily`, {
+        params: this.buildPeriodParams(dateFrom, dateTo),
+      })
+      .pipe(
+        timeout({ first: this.requestTimeoutMs }),
+        map((response) => normalizeYandexDailyStats(response, dateFrom, dateTo))
+      );
+  }
+
   getTikTokTotal(force = false) {
     if (!this.tiktokTotal$ || force) {
       this.tiktokTotal$ = this.http
@@ -242,6 +267,50 @@ export class AnalyticsApiService {
       .pipe(
         timeout({ first: this.requestTimeoutMs }),
         map((items) => normalizeTikTokPeriodMetrics(items))
+      );
+  }
+
+  getInstagramProjectStats(projectId: number, dateFrom: string, dateTo: string) {
+    return this.http
+      .get<any>(`${this.baseUrl}/ssm/instagram_project_stats/project_id=${projectId}`, {
+        params: this.buildPeriodParams(dateFrom, dateTo),
+      })
+      .pipe(
+        timeout({ first: this.requestTimeoutMs }),
+        map((response) => normalizeInstagramProjectStats(response, dateFrom, dateTo, projectId))
+      );
+  }
+
+  getInstagramProjectsStats(dateFrom: string, dateTo: string) {
+    return this.http
+      .get<any>(`${this.baseUrl}/ssm/instagram_projects_stats`, {
+        params: this.buildPeriodParams(dateFrom, dateTo),
+      })
+      .pipe(
+        timeout({ first: this.requestTimeoutMs }),
+        map((response) => normalizeInstagramProjectStats(response, dateFrom, dateTo))
+      );
+  }
+
+  getTikTokProjectStats(projectId: number, dateFrom: string, dateTo: string) {
+    return this.http
+      .get<any>(`${this.baseUrl}/ssm/tiktok_project_stats/project_id=${projectId}`, {
+        params: this.buildPeriodParams(dateFrom, dateTo),
+      })
+      .pipe(
+        timeout({ first: this.requestTimeoutMs }),
+        map((response) => normalizeTikTokProjectStats(response, dateFrom, dateTo, projectId))
+      );
+  }
+
+  getTikTokProjectsStats(dateFrom: string, dateTo: string) {
+    return this.http
+      .get<any>(`${this.baseUrl}/ssm/tiktok_projects_stats`, {
+        params: this.buildPeriodParams(dateFrom, dateTo),
+      })
+      .pipe(
+        timeout({ first: this.requestTimeoutMs }),
+        map((response) => normalizeTikTokProjectStats(response, dateFrom, dateTo))
       );
   }
 

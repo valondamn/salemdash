@@ -41,4 +41,16 @@ export class YoutubeSingleStatsComponent {
       maximumFractionDigits: 2,
     }).format(value)}%`;
   }
+
+  dateLabel(episode: EpisodeInfo) {
+    return (episode.youtube_release_date || episode.release_date || '').slice(0, 10) || '—';
+  }
+
+  rowTitle(episode: EpisodeInfo) {
+    return episode.episode_name || episode.youtube_channel || '—';
+  }
+
+  sortedEpisodes() {
+    return [...(this.episodes ?? [])].sort((a, b) => this.dateLabel(a).localeCompare(this.dateLabel(b)));
+  }
 }

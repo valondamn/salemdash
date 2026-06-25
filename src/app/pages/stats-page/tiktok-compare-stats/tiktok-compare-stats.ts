@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
-import { NgFor, NgIf } from '@angular/common';
+import { NgFor } from '@angular/common';
 
 import { TikTokAccountTotals } from '../../../shared/services/ssm-models';
 import { CompareMetricRow } from '../stats.models';
@@ -7,7 +7,7 @@ import { CompareMetricRow } from '../stats.models';
 @Component({
   selector: 'app-tiktok-compare-stats',
   standalone: true,
-  imports: [NgFor, NgIf],
+  imports: [NgFor],
   templateUrl: './tiktok-compare-stats.html',
   styleUrl: './tiktok-compare-stats.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

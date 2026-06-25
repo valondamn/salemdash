@@ -179,11 +179,12 @@ h2 {
 .control-grid {
   display: grid;
   gap: 14px;
-  grid-template-columns: minmax(220px, 320px);
+  align-items: end;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 280px));
 }
 
 .compare-grid {
-  grid-template-columns: repeat(2, minmax(220px, 280px));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 280px));
 }
 
 .control-item {
@@ -318,6 +319,11 @@ h2 {
 }
 
 .tiktok-compare-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.project-platform-grid,
+.project-platform-compare-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
@@ -500,6 +506,10 @@ h2 {
   grid-template-columns: 1fr 0.8fr 0.8fr;
 }
 
+.project-platform-table .row {
+  grid-template-columns: 0.75fr minmax(180px, 1.5fr) repeat(4, minmax(86px, 0.7fr));
+}
+
 .row {
   display: grid;
   gap: 10px;
@@ -594,12 +604,18 @@ h2 {
   .stats-grid,
   .compare-metrics-grid,
   .yandex-stats-grid,
-  .yandex-compare-grid {
+  .yandex-compare-grid,
+  .project-platform-grid,
+  .project-platform-compare-grid {
     grid-template-columns: 1fr;
   }
 
   .compare-grid,
   .control-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .project-platform-table .row {
     grid-template-columns: 1fr;
   }
 

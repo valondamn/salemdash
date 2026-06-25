@@ -438,6 +438,45 @@ export type TikTokAccountTotals = {
   updated_at: string;
 };
 
+export type ProjectStatsSource = 'yandex' | 'instagram' | 'tiktok';
+
+export type ProjectMetricTotals = {
+  primary: number;
+  secondary: number;
+  tertiary: number;
+  quaternary: number;
+};
+
+export type ProjectMetricLabels = {
+  primary: string;
+  secondary: string;
+  tertiary: string;
+  quaternary: string;
+};
+
+export type ProjectMetricRow = {
+  project_id: number;
+  project_name: string;
+  metric_date: string;
+  label: string;
+  url: string;
+  primary: number;
+  secondary: number;
+  tertiary: number;
+  quaternary: number;
+};
+
+export type ProjectPlatformStats = {
+  source: ProjectStatsSource;
+  project_id: number;
+  project_name: string;
+  date_from: string;
+  date_to: string;
+  labels: ProjectMetricLabels;
+  totals: ProjectMetricTotals;
+  rows: ProjectMetricRow[];
+};
+
 export type ProjectInfoApiItem = {
   ID?: number;
   ProjectID?: number;

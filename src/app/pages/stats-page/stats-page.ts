@@ -1,10 +1,10 @@
 import { ChangeDetectorRef, Component, NgZone, OnInit, ViewEncapsulation } from '@angular/core';
-import { NgFor, NgIf, UpperCasePipe } from '@angular/common';
+import { NgFor, NgIf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 
-import { Project, EpisodeInfo, InstagramAccount, YandexProjectAnalytics, TikTokTotal, TikTokAccountTotals } from '../../shared/services/ssm-models';
+import { Project, EpisodeInfo, InstagramAccount, YandexProjectAnalytics, TikTokTotal, TikTokAccountTotals, ProjectPlatformStats, ProjectMetricRow, YoutubeReleaseMetric } from '../../shared/services/ssm-models';
 import { ProjectsApiService } from '../../shared/services/projects-api.service';
 import { AnalyticsApiService } from '../../shared/services/analytics-api.service';
 import {
@@ -17,12 +17,6 @@ import {
 } from './stats.models';
 import { YoutubeSingleStatsComponent } from './youtube-single-stats/youtube-single-stats';
 import { YoutubeCompareStatsComponent } from './youtube-compare-stats/youtube-compare-stats';
-import { YandexSingleStatsComponent } from './yandex-single-stats/yandex-single-stats';
-import { YandexCompareStatsComponent } from './yandex-compare-stats/yandex-compare-stats';
-import { InstagramSingleStatsComponent } from './instagram-single-stats/instagram-single-stats';
-import { InstagramCompareStatsComponent } from './instagram-compare-stats/instagram-compare-stats';
-import { TikTokSingleStatsComponent } from './tiktok-single-stats/tiktok-single-stats';
-import { TikTokCompareStatsComponent } from './tiktok-compare-stats/tiktok-compare-stats';
 
 @Component({
   selector: 'app-stats-page',
@@ -30,16 +24,9 @@ import { TikTokCompareStatsComponent } from './tiktok-compare-stats/tiktok-compa
   imports: [
     NgFor,
     NgIf,
-    UpperCasePipe,
     FormsModule,
     YoutubeSingleStatsComponent,
     YoutubeCompareStatsComponent,
-    YandexSingleStatsComponent,
-    YandexCompareStatsComponent,
-    InstagramSingleStatsComponent,
-    InstagramCompareStatsComponent,
-    TikTokSingleStatsComponent,
-    TikTokCompareStatsComponent,
   ],
   templateUrl: './stats-page.html',
   styleUrl: './stats-page.scss',
@@ -69,6 +56,17 @@ export class StatsPageComponent implements OnInit {
   projectBId = '';
   episodesA: EpisodeInfo[] = [];
   episodesB: EpisodeInfo[] = [];
+
+  projectStatsId = 'all';
+  projectStatsAId = '';
+  projectStatsBId = '';
+  dateFrom = '';
+  dateTo = '';
+  appliedDateFrom = '';
+  appliedDateTo = '';
+  projectStats: ProjectPlatformStats | null = null;
+  projectStatsA: ProjectPlatformStats | null = null;
+  projectStatsB: ProjectPlatformStats | null = null;
 
   kpiA = { views: 0, likes: 0, comments: 0, avgViews: 0, engagement: 0, episodes: 0 };
   kpiB = { views: 0, likes: 0, comments: 0, avgViews: 0, engagement: 0, episodes: 0 };
@@ -105,9 +103,8 @@ export class StatsPageComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.setDefaultPeriod();
     this.loadProjects();
-    this.loadInstagramAccounts();
-    this.loadTikTok();
   }
 
   get hasYoutubeSingleData() {
@@ -119,19 +116,48 @@ export class StatsPageComponent implements OnInit {
   }
 
   get hasYandexData() {
-    return this.mode === 'single' ? !!this.yandexSingle : !!this.yandexProjectA || !!this.yandexProjectB;
+    return this.mode === 'single' ? !!this.projectStats : !!this.projectStatsA || !!this.projectStatsB;
   }
 
   get hasInstagramData() {
-    return this.instagramAccounts.length > 0;
+    return this.mode === 'single' ? !!this.projectStats : !!this.projectStatsA || !!this.projectStatsB;
   }
 
   get hasTikTokData() {
-    return !!this.tiktokTotal;
+    return this.mode === 'single' ? !!this.projectStats : !!this.projectStatsA || !!this.projectStatsB;
   }
 
   get hasTikTokCompareData() {
-    return this.tiktokAccounts.length >= 2 || (!!this.tiktokCompareAccountA && !!this.tiktokCompareAccountB);
+    return !!this.projectStatsA || !!this.projectStatsB;
+  }
+
+  get isProjectPlatformSource() {
+    return this.activeSource === 'yandex' || this.activeSource === 'instagram' || this.activeSource === 'tiktok';
+  }
+
+  get periodLabel() {
+    return `${this.appliedDateFrom} - ${this.appliedDateTo}`;
+  }
+
+  get projectStatsRows() {
+    return this.projectStats?.rows ?? [];
+  }
+
+  get projectStatsLabels() {
+    return this.projectStats?.labels ?? { primary: 'Метрика 1', secondary: 'Метрика 2', tertiary: 'Метрика 3', quaternary: 'Метрика 4' };
+  }
+
+  get projectStatsCompareRows(): CompareMetricRow[] {
+    const a = this.projectStatsA;
+    const b = this.projectStatsB;
+    const labels = a?.labels ?? b?.labels ?? this.projectStatsLabels;
+
+    return [
+      this.buildCompareMetric('primary', labels.primary, a?.totals.primary || 0, b?.totals.primary || 0, 'number'),
+      this.buildCompareMetric('secondary', labels.secondary, a?.totals.secondary || 0, b?.totals.secondary || 0, 'number'),
+      this.buildCompareMetric('tertiary', labels.tertiary, a?.totals.tertiary || 0, b?.totals.tertiary || 0, 'number'),
+      this.buildCompareMetric('quaternary', labels.quaternary, a?.totals.quaternary || 0, b?.totals.quaternary || 0, 'number'),
+    ];
   }
 
   get tiktokCompareAccountA(): TikTokAccountTotals | null {
@@ -174,6 +200,7 @@ export class StatsPageComponent implements OnInit {
   }
 
   get currentLoading() {
+    if (this.isProjectPlatformSource) return this.loadingInfo;
     if (this.activeSource === 'instagram') return this.loadingInstagram;
     if (this.activeSource === 'tiktok') return this.loadingTiktok;
     return this.loadingInfo;
@@ -182,28 +209,19 @@ export class StatsPageComponent implements OnInit {
   setSource(source: Source) {
     this.activeSource = source;
 
-    if (source === 'tiktok') {
-      if (!this.hasTikTokData) this.loadTikTok();
-      return; // TikTok uses already-loaded account data for both single and compare
-    }
-
     if (this.mode === 'compare') {
       if (source === 'youtube') {
         this.loadCompareYouTube();
-      } else if (source === 'yandex') {
-        this.loadCompareYandex();
-      } else {
-        this.ensureInstagramDefaults();
+      } else if (this.isProjectPlatformSource) {
+        this.loadCompareProjectPlatformStats();
       }
       return;
     }
 
     if (source === 'youtube') {
       this.loadProjectInfo();
-    } else if (source === 'yandex') {
-      this.loadYandexSingle();
-    } else {
-      this.ensureInstagramDefaults();
+    } else if (this.isProjectPlatformSource) {
+      this.loadProjectPlatformStats();
     }
   }
 
@@ -216,23 +234,17 @@ export class StatsPageComponent implements OnInit {
         if (!this.projectBId && this.projects.length > 1) this.projectBId = String(this.projects[1].id);
         if (!this.projectBId && this.projects.length) this.projectBId = String(this.projects[0].id);
         this.loadCompareYouTube();
-      } else if (this.activeSource === 'yandex') {
-        if (!this.yandexProjectAId && this.projects.length) this.yandexProjectAId = String(this.projects[0].id);
-        if (!this.yandexProjectBId && this.projects.length > 1) this.yandexProjectBId = String(this.projects[1].id);
-        if (!this.yandexProjectBId && this.projects.length) this.yandexProjectBId = String(this.projects[0].id);
-        this.loadCompareYandex();
-      } else {
-        this.ensureInstagramDefaults();
+      } else if (this.isProjectPlatformSource) {
+        this.ensureProjectStatsCompareDefaults();
+        this.loadCompareProjectPlatformStats();
       }
       return;
     }
 
     if (this.activeSource === 'youtube') {
       this.loadProjectInfo();
-    } else if (this.activeSource === 'yandex') {
-      this.loadYandexSingle();
-    } else {
-      this.ensureInstagramDefaults();
+    } else if (this.isProjectPlatformSource) {
+      this.loadProjectPlatformStats();
     }
   }
 
@@ -248,18 +260,11 @@ export class StatsPageComponent implements OnInit {
       return;
     }
 
-    if (this.activeSource === 'yandex') {
-      if (this.mode === 'single') this.loadYandexSingle(true);
-      else this.loadCompareYandex(true);
+    if (this.isProjectPlatformSource) {
+      if (this.mode === 'single') this.loadProjectPlatformStats(true);
+      else this.loadCompareProjectPlatformStats(true);
       return;
     }
-
-    if (this.activeSource === 'tiktok') {
-      this.loadTikTok(true);
-      return;
-    }
-
-    this.loadInstagramAccounts(true);
   }
 
   loadTikTok(force = false) {
@@ -309,6 +314,11 @@ export class StatsPageComponent implements OnInit {
           this.selectedProjectId = String(this.projects[0].id);
         }
 
+        if (!this.projectStatsId) this.projectStatsId = 'all';
+        if (this.projects.length && !this.projectStatsAId) this.projectStatsAId = String(this.projects[0].id);
+        if (this.projects.length > 1 && !this.projectStatsBId) this.projectStatsBId = String(this.projects[1].id);
+        if (!this.projectStatsBId && this.projects.length) this.projectStatsBId = String(this.projects[0].id);
+
         if (this.projects.length && !this.yandexProjectId) this.yandexProjectId = String(this.projects[0].id);
         if (this.projects.length && !this.yandexProjectAId) this.yandexProjectAId = String(this.projects[0].id);
         if (this.projects.length > 1 && !this.yandexProjectBId) this.yandexProjectBId = String(this.projects[1].id);
@@ -320,8 +330,8 @@ export class StatsPageComponent implements OnInit {
 
         if (this.activeSource === 'youtube') {
           this.loadProjectInfo(force);
-        } else if (this.activeSource === 'yandex') {
-          this.loadYandexSingle(force);
+        } else if (this.isProjectPlatformSource) {
+          this.loadProjectPlatformStats(force);
         }
       },
       error: (e: any) => {
@@ -352,10 +362,10 @@ export class StatsPageComponent implements OnInit {
     this.error = null;
     this.startInfoLoadTimer('Данные проекта загружаются дольше обычного. Попробуйте обновить ещё раз.');
 
-    this.projectsApi.getProjectInfo(id, force).subscribe({
-      next: (rows) => {
+    this.analyticsApi.getYoutubeProjectReleaseMetrics(id, this.appliedDateFrom, this.appliedDateTo).subscribe({
+      next: (period) => {
         this.clearInfoLoadTimer();
-        this.episodes = rows ?? [];
+        this.episodes = this.mapYoutubePeriodRows(period.items, id);
         this.computeYouTubeSingle();
         this.loadingInfo = false;
         this.cdr.detectChanges();
@@ -373,6 +383,42 @@ export class StatsPageComponent implements OnInit {
     this.loadCompareYouTube();
   }
 
+  onProjectStatsChange() {
+    this.loadProjectPlatformStats();
+  }
+
+  onCompareProjectStatsChange() {
+    this.loadCompareProjectPlatformStats();
+  }
+
+  applyPeriod() {
+    this.error = null;
+
+    if (!this.dateFrom || !this.dateTo) {
+      this.error = 'Выберите начало и конец периода.';
+      return;
+    }
+
+    if (this.dateFrom > this.dateTo) {
+      this.error = 'Дата начала не может быть позже даты окончания.';
+      return;
+    }
+
+    this.appliedDateFrom = this.dateFrom;
+    this.appliedDateTo = this.dateTo;
+
+    if (this.activeSource === 'youtube') {
+      if (this.mode === 'single') this.loadProjectInfo(true);
+      else this.loadCompareYouTube(true);
+      return;
+    }
+
+    if (!this.isProjectPlatformSource) return;
+
+    if (this.mode === 'single') this.loadProjectPlatformStats(true);
+    else this.loadCompareProjectPlatformStats(true);
+  }
+
   loadCompareYouTube(force = false) {
     const aId = Number(this.projectAId);
     const bId = Number(this.projectBId);
@@ -386,13 +432,13 @@ export class StatsPageComponent implements OnInit {
     this.startInfoLoadTimer('Сравнение проектов загружается дольше обычного. Попробуйте обновить ещё раз.');
 
     forkJoin([
-      this.projectsApi.getProjectInfo(aId, force),
-      this.projectsApi.getProjectInfo(bId, force),
+      this.analyticsApi.getYoutubeProjectReleaseMetrics(aId, this.appliedDateFrom, this.appliedDateTo),
+      this.analyticsApi.getYoutubeProjectReleaseMetrics(bId, this.appliedDateFrom, this.appliedDateTo),
     ]).subscribe({
       next: ([projectA, projectB]) => {
         this.clearInfoLoadTimer();
-        this.episodesA = projectA ?? [];
-        this.episodesB = projectB ?? [];
+        this.episodesA = this.mapYoutubePeriodRows(projectA.items, aId);
+        this.episodesB = this.mapYoutubePeriodRows(projectB.items, bId);
         this.kpiA = this.computeKpi(this.episodesA);
         this.kpiB = this.computeKpi(this.episodesB);
         this.loadingInfo = false;
@@ -424,6 +470,67 @@ export class StatsPageComponent implements OnInit {
         }
       },
     });
+  }
+
+  loadProjectPlatformStats(force = false) {
+    const projectId = this.projectStatsId === 'all' ? null : Number(this.projectStatsId);
+    if (projectId !== null && !projectId) {
+      this.loadingInfo = false;
+      return;
+    }
+
+    this.loadingInfo = true;
+    this.error = null;
+    this.startInfoLoadTimer('Проектная статистика загружается дольше обычного. Попробуйте обновить ещё раз.');
+
+    this.getProjectPlatformRequest(projectId)
+      .pipe(finalize(() => { this.loadingInfo = false; this.cdr.detectChanges(); }))
+      .subscribe({
+        next: (stats) => {
+          this.clearInfoLoadTimer();
+          this.projectStats = stats;
+          this.projectStatsA = null;
+          this.projectStatsB = null;
+          this.cdr.detectChanges();
+        },
+        error: (e: any) => {
+          this.clearInfoLoadTimer();
+          this.error = e?.message ?? 'Не удалось загрузить проектную статистику';
+        },
+      });
+  }
+
+  loadCompareProjectPlatformStats(force = false) {
+    const aId = Number(this.projectStatsAId);
+    const bId = Number(this.projectStatsBId);
+
+    if (!aId || !bId) {
+      this.loadingInfo = false;
+      return;
+    }
+
+    this.loadingInfo = true;
+    this.error = null;
+    this.startInfoLoadTimer('Сравнение проектной статистики загружается дольше обычного. Попробуйте обновить ещё раз.');
+
+    forkJoin([
+      this.getProjectPlatformRequest(aId),
+      this.getProjectPlatformRequest(bId),
+    ])
+      .pipe(finalize(() => { this.loadingInfo = false; this.cdr.detectChanges(); }))
+      .subscribe({
+        next: ([a, b]) => {
+          this.clearInfoLoadTimer();
+          this.projectStats = null;
+          this.projectStatsA = a;
+          this.projectStatsB = b;
+          this.cdr.detectChanges();
+        },
+        error: (e: any) => {
+          this.clearInfoLoadTimer();
+          this.error = e?.message ?? 'Не удалось загрузить сравнение проектной статистики';
+        },
+      });
   }
 
   onYandexProjectChange() {
@@ -557,23 +664,24 @@ export class StatsPageComponent implements OnInit {
   }
 
   get youtubeCompareLabels(): string[] {
-    return this.buildIndexedLabels(Math.max(this.episodesA.length, this.episodesB.length));
+    const labels = this.youtubeDateLabels(this.episodesA, this.episodesB);
+    return labels.length ? labels : this.buildIndexedLabels(Math.max(this.episodesA.length, this.episodesB.length));
   }
 
   get youtubeViewSeriesA(): Array<number | null> {
-    return this.episodeSeries(this.episodesA, (episode) => Number(episode.youtube_views) || 0);
+    return this.youtubeSeriesForLabels(this.episodesA, (episode) => Number(episode.youtube_views) || 0);
   }
 
   get youtubeViewSeriesB(): Array<number | null> {
-    return this.episodeSeries(this.episodesB, (episode) => Number(episode.youtube_views) || 0);
+    return this.youtubeSeriesForLabels(this.episodesB, (episode) => Number(episode.youtube_views) || 0);
   }
 
   get youtubeEngagementSeriesA(): Array<number | null> {
-    return this.episodeSeries(this.episodesA, (episode) => this.episodeEngagement(episode));
+    return this.youtubeEngagementSeriesForLabels(this.episodesA);
   }
 
   get youtubeEngagementSeriesB(): Array<number | null> {
-    return this.episodeSeries(this.episodesB, (episode) => this.episodeEngagement(episode));
+    return this.youtubeEngagementSeriesForLabels(this.episodesB);
   }
 
   get yandexCompareLabels(): string[] {
@@ -613,18 +721,16 @@ export class StatsPageComponent implements OnInit {
 
   getSourceDescription() {
     if (this.activeSource === 'youtube') return 'Эпизоды, охват и вовлечённость.';
-    if (this.activeSource === 'yandex') return 'Суммы по URL и проектам из Яндекс Метрики.';
-    if (this.activeSource === 'tiktok') return 'Суммарные данные по TikTok-аккаунтам.';
-    return 'Snapshot по Instagram-аккаунтам.';
+    if (this.activeSource === 'yandex') return 'Проектная Яндекс Метрика за выбранный период.';
+    if (this.activeSource === 'tiktok') return 'Проектная TikTok-статистика за выбранный период.';
+    return 'Проектная Instagram-статистика за выбранный период.';
   }
 
   getSelectionHint() {
     if (this.activeSource === 'youtube') {
       return this.mode === 'compare' ? 'Сравнение двух проектов.' : 'Выбор по проекту.';
     }
-    if (this.activeSource === 'yandex') return 'Выбор идёт по projectId.';
-    if (this.activeSource === 'tiktok') return 'Данные по всем TikTok-аккаунтам.';
-    return 'Выбор идёт по аккаунту.';
+    return this.mode === 'compare' ? 'Сравнение двух проектов за период.' : 'Выбор проекта и периода.';
   }
 
   getLoadingMessage() {
@@ -633,19 +739,19 @@ export class StatsPageComponent implements OnInit {
       return this.mode === 'compare' ? 'Загружаем два проекта.' : 'Загружаем проект.';
     }
     if (this.activeSource === 'yandex') {
-      return this.mode === 'compare' ? 'Обновляем два projectId.' : 'Обновляем данные по projectId.';
+      return this.mode === 'compare' ? 'Обновляем два проекта по Яндексу.' : 'Обновляем Яндекс по проекту.';
     }
-    if (this.activeSource === 'tiktok') return 'Загружаем данные TikTok.';
-    return 'Обновляем Instagram-данные.';
+    if (this.activeSource === 'tiktok') return 'Обновляем TikTok по проекту.';
+    return 'Обновляем Instagram по проекту.';
   }
 
   getEmptyStateTitle() {
     if (this.activeSource === 'youtube') {
       return this.mode === 'compare' ? 'Пока нет данных для сравнения YouTube' : 'По этому проекту нет YouTube-данных';
     }
-    if (this.activeSource === 'yandex') return 'По Яндекс Метрике пока нет данных';
-    if (this.activeSource === 'tiktok') return 'По TikTok пока нет данных';
-    return 'По Instagram пока нет данных';
+    if (this.activeSource === 'yandex') return 'По проекту нет данных Яндекс Метрики';
+    if (this.activeSource === 'tiktok') return 'По проекту нет TikTok-данных';
+    return 'По проекту нет Instagram-данных';
   }
 
   getEmptyStateCopy() {
@@ -654,7 +760,7 @@ export class StatsPageComponent implements OnInit {
         ? 'Выберите два проекта или обновите данные.'
         : 'Попробуйте другой проект.';
     }
-    if (this.activeSource === 'tiktok') return 'Нажмите «Обновить данные» или проверьте API.';
+    if (this.isProjectPlatformSource) return 'Проверьте проект и выбранный период.';
     return 'Данные появятся после ответа API.';
   }
 
@@ -663,11 +769,7 @@ export class StatsPageComponent implements OnInit {
       return `${this.getProjectNameById(this.selectedProjectId)} — обзор`;
     }
 
-    if (this.activeSource === 'yandex') {
-      return `${this.getProjectNameById(this.yandexProjectId)} — обзор`;
-    }
-
-    return `${this.getInstagramLabelById(this.selectedInstagramId)} — обзор`;
+    return `${this.getProjectNameById(this.projectStatsId)} — обзор`;
   }
 
   getComparePrimaryLabel() {
@@ -676,10 +778,10 @@ export class StatsPageComponent implements OnInit {
     }
 
     if (this.activeSource === 'yandex') {
-      return this.getProjectNameById(this.yandexProjectAId);
+      return this.getProjectNameById(this.projectStatsAId);
     }
 
-    return this.getInstagramLabelById(this.instagramAId);
+    return this.getProjectNameById(this.projectStatsAId);
   }
 
   getCompareSecondaryLabel() {
@@ -688,10 +790,10 @@ export class StatsPageComponent implements OnInit {
     }
 
     if (this.activeSource === 'yandex') {
-      return this.getProjectNameById(this.yandexProjectBId);
+      return this.getProjectNameById(this.projectStatsBId);
     }
 
-    return this.getInstagramLabelById(this.instagramBId);
+    return this.getProjectNameById(this.projectStatsBId);
   }
 
   getCompareSummary(rows: CompareMetricRow[], labelA: string, labelB: string) {
@@ -717,7 +819,29 @@ export class StatsPageComponent implements OnInit {
     return this.tiktokCompareAccountB?.channel_name || 'Аккаунт B';
   }
 
+  fmt(value: number) {
+    return Intl.NumberFormat('ru-RU').format(value || 0);
+  }
+
+  fmtCompact(value: number) {
+    return Intl.NumberFormat('ru-RU', {
+      notation: 'compact',
+      maximumFractionDigits: 1,
+    }).format(value || 0);
+  }
+
+  metricDateLabel(row: ProjectMetricRow) {
+    return row.metric_date || row.label || '—';
+  }
+
+  projectStatRowTitle(row: ProjectMetricRow) {
+    if (this.activeSource === 'yandex') return row.label || row.url || 'Источник';
+    return row.label || row.metric_date || 'Строка';
+  }
+
   getProjectNameById(id: string) {
+    if (id === 'all') return 'Все проекты';
+
     const projectId = Number(id);
     const project = this.projects.find((item) => Number(item.id) === projectId);
     return project?.name || project?.utm_name || `Проект ${id}`;
@@ -730,6 +854,56 @@ export class StatsPageComponent implements OnInit {
 
   private countWins(rows: CompareMetricRow[], winner: MetricWinner) {
     return rows.filter((row) => row.winner === winner).length;
+  }
+
+  private setDefaultPeriod() {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+
+    this.dateFrom = `${yyyy}-${mm}-01`;
+    this.dateTo = `${yyyy}-${mm}-${dd}`;
+    this.appliedDateFrom = this.dateFrom;
+    this.appliedDateTo = this.dateTo;
+  }
+
+  private ensureProjectStatsCompareDefaults() {
+    if (!this.projectStatsAId && this.projects.length) {
+      this.projectStatsAId = String(this.projects[0].id);
+    }
+
+    if (!this.projectStatsBId && this.projects.length > 1) {
+      this.projectStatsBId = String(this.projects[1].id);
+    }
+
+    if (!this.projectStatsBId && this.projects.length) {
+      this.projectStatsBId = String(this.projects[0].id);
+    }
+  }
+
+  private getProjectPlatformRequest(projectId: number | null) {
+    if (this.activeSource === 'yandex') {
+      if (projectId === null) {
+        return this.analyticsApi.getYandexProjectsDaily(this.appliedDateFrom, this.appliedDateTo);
+      }
+
+      return this.analyticsApi.getYandexProjectDaily(projectId, this.appliedDateFrom, this.appliedDateTo);
+    }
+
+    if (this.activeSource === 'instagram') {
+      if (projectId === null) {
+        return this.analyticsApi.getInstagramProjectsStats(this.appliedDateFrom, this.appliedDateTo);
+      }
+
+      return this.analyticsApi.getInstagramProjectStats(projectId, this.appliedDateFrom, this.appliedDateTo);
+    }
+
+    if (projectId === null) {
+      return this.analyticsApi.getTikTokProjectsStats(this.appliedDateFrom, this.appliedDateTo);
+    }
+
+    return this.analyticsApi.getTikTokProjectStats(projectId, this.appliedDateFrom, this.appliedDateTo);
   }
 
   private startProjectLoadTimer() {
@@ -848,19 +1022,67 @@ export class StatsPageComponent implements OnInit {
       .slice(0, 12);
   }
 
-  private episodeSeries(
-    episodes: EpisodeInfo[],
-    selector: (episode: EpisodeInfo) => number
-  ): Array<number | null> {
-    return this.sortEpisodes(episodes).map((episode) => selector(episode));
-  }
-
   private sortEpisodes(episodes: EpisodeInfo[]) {
     return [...episodes].sort((a, b) => this.pickEpisodeDate(a).localeCompare(this.pickEpisodeDate(b)));
   }
 
   private pickEpisodeDate(episode: EpisodeInfo) {
     return (episode.youtube_release_date || episode.release_date || '').slice(0, 10);
+  }
+
+  private mapYoutubePeriodRows(rows: YoutubeReleaseMetric[], projectId: number): EpisodeInfo[] {
+    return (rows ?? []).map((row, index) => ({
+      id: index + 1,
+      project_id: projectId,
+      project_name: row.project_name,
+      episode_name: row.channel_name ? `${row.metric_date} · ${row.channel_name}` : row.metric_date,
+      youtube_channel: row.channel_name,
+      youtube_views: row.views,
+      youtube_likes: row.likes,
+      youtube_comments: row.comments,
+      release_date: row.metric_date,
+      youtube_release_date: row.metric_date,
+      subscribers_gained: row.subscribers_gained,
+      subscribers_lost: row.subscribers_lost,
+      subscribers_net: row.subscribers_net,
+    }));
+  }
+
+  private youtubeDateLabels(...episodeGroups: EpisodeInfo[][]): string[] {
+    const labels = new Set<string>();
+
+    episodeGroups
+      .flat()
+      .forEach((episode) => {
+        const date = this.pickEpisodeDate(episode);
+        if (date) labels.add(date);
+      });
+
+    return [...labels].sort((a, b) => a.localeCompare(b));
+  }
+
+  private youtubeSeriesForLabels(
+    episodes: EpisodeInfo[],
+    selector: (episode: EpisodeInfo) => number
+  ): Array<number | null> {
+    return this.youtubeCompareLabels.map((label) => {
+      const value = episodes
+        .filter((episode) => this.pickEpisodeDate(episode) === label)
+        .reduce((sum, episode) => sum + selector(episode), 0);
+
+      return value || 0;
+    });
+  }
+
+  private youtubeEngagementSeriesForLabels(episodes: EpisodeInfo[]): Array<number | null> {
+    return this.youtubeCompareLabels.map((label) => {
+      const rows = episodes.filter((episode) => this.pickEpisodeDate(episode) === label);
+      const views = rows.reduce((sum, episode) => sum + (Number(episode.youtube_views) || 0), 0);
+      const likes = rows.reduce((sum, episode) => sum + (Number(episode.youtube_likes) || 0), 0);
+      const comments = rows.reduce((sum, episode) => sum + (Number(episode.youtube_comments) || 0), 0);
+
+      return views ? ((likes + comments) / views) * 100 : 0;
+    });
   }
 
   private episodeEngagement(episode: EpisodeInfo) {

@@ -2,7 +2,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 
 import { AnalyticsApiService } from '../../shared/services/analytics-api.service';
-import { ProjectsApiService } from '../../shared/services/projects-api.service';
 import { DashboardPageComponent } from './dashboard-page';
 
 describe('DashboardPageComponent', () => {
@@ -13,14 +12,12 @@ describe('DashboardPageComponent', () => {
     await TestBed.configureTestingModule({
       imports: [DashboardPageComponent],
       providers: [
-        { provide: ProjectsApiService, useValue: { getProjects: () => of([]), getProjectInfo: () => of([]) } },
         {
           provide: AnalyticsApiService,
           useValue: {
             getYoutubeChannels: () => of([]),
             getInstagramAccounts: () => of([]),
             getYandexTotal: () => of({ total_count: 0, total_kz_count: 0, url_count: 0 }),
-            getYandexProjects: () => of([]),
             getTikTokTotal: () => of({
               accounts_count: 0,
               total_comments: 0,

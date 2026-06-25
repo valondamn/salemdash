@@ -7,6 +7,9 @@ import {
   LoginResponse,
   ProjectInfoApiItem,
   ProjectInfoApiResponse,
+  ProjectMetricRow,
+  ProjectPlatformStats,
+  ProjectStatsSource,
   Project,
   ProjectAccountOption,
   RoleOption,
@@ -319,6 +322,128 @@ export function normalizeTikTokPeriodMetric(item: TikTokPeriodMetricApiItem): Ti
 
 export function normalizeTikTokPeriodMetrics(items: TikTokPeriodMetricApiItem[] | null | undefined): TikTokPeriodMetric[] {
   return (items ?? []).map((item) => normalizeTikTokPeriodMetric(item));
+}
+
+function unwrapItems(response: any): any[] {
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response?.Items)) return response.Items;
+  if (Array.isArray(response?.items)) return response.items;
+  return [];
+}
+
+function normalizeMetricDate(...values: any[]): string {
+  const raw = pickString(...values) ?? '';
+  if (!raw) return '';
+
+  const parsed = new Date(raw);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toISOString().slice(0, 10);
+  }
+
+  return raw.slice(0, 10);
+}
+
+function buildProjectPlatformStats(
+  source: ProjectStatsSource,
+  response: any,
+  labels: ProjectPlatformStats['labels'],
+  rows: ProjectMetricRow[],
+  dateFrom = '',
+  dateTo = '',
+  fallbackProjectId = 0
+): ProjectPlatformStats {
+  const first = rows[0];
+
+  return {
+    source,
+    project_id: pickNumber(response?.ProjectID, response?.project_id, fallbackProjectId, first?.project_id) ?? 0,
+    project_name: pickString(response?.ProjectName, response?.project_name, first?.project_name) ?? 'Проект',
+    date_from: pickString(response?.DateFrom, response?.date_from, dateFrom) ?? '',
+    date_to: pickString(response?.DateTo, response?.date_to, dateTo) ?? '',
+    labels,
+    totals: {
+      primary: rows.reduce((sum, row) => sum + row.primary, 0),
+      secondary: rows.reduce((sum, row) => sum + row.secondary, 0),
+      tertiary: rows.reduce((sum, row) => sum + row.tertiary, 0),
+      quaternary: rows.reduce((sum, row) => sum + row.quaternary, 0),
+    },
+    rows,
+  };
+}
+
+export function normalizeYandexDailyStats(response: any, dateFrom = '', dateTo = '', fallbackProjectId = 0): ProjectPlatformStats {
+  const items = unwrapItems(response);
+  const rows = items.map((item): ProjectMetricRow => ({
+    project_id: pickNumber(item.ProjectID, item.project_id, fallbackProjectId) ?? 0,
+    project_name: pickString(item.ProjectName, item.project_name) ?? 'Проект',
+    metric_date: normalizeMetricDate(item.Metric_Date ?? item.metric_date ?? item.Date),
+    label: pickString(item.Name, item.name, item.ProjectName) ?? 'Источник',
+    url: pickString(item.URL, item.url) ?? '',
+    primary: pickNumber(item.Count, item.TotalCount, item.count, item.total_count) ?? 0,
+    secondary: pickNumber(item.Users, item.TotalUsers, item.users, item.total_users) ?? 0,
+    tertiary: pickNumber(item.KZCount, item.TotalKZCount, item.kz_count, item.total_kz_count) ?? 0,
+    quaternary: pickNumber(item.KZUsers, item.TotalKZUsers, item.kz_users, item.total_kz_users, item.UrlCount) ?? 0,
+  }));
+
+  return buildProjectPlatformStats(
+    'yandex',
+    response,
+    { primary: 'Total', secondary: 'Users', tertiary: 'KZ Total', quaternary: 'KZ Users' },
+    rows,
+    dateFrom,
+    dateTo,
+    fallbackProjectId
+  );
+}
+
+export function normalizeInstagramProjectStats(response: any, dateFrom = '', dateTo = '', fallbackProjectId = 0): ProjectPlatformStats {
+  const items = unwrapItems(response);
+  const rows = items.map((item): ProjectMetricRow => ({
+    project_id: pickNumber(item.ProjectID, item.project_id, fallbackProjectId) ?? 0,
+    project_name: pickString(item.ProjectName, item.project_name) ?? 'Проект',
+    metric_date: normalizeMetricDate(item.metric_date, item.Metric_Date),
+    label: pickString(item.page_name, item.Page_Name, item.username, item.Instagram_Username) ?? 'Instagram',
+    url: pickString(item.username, item.Instagram_Username) ? `https://www.instagram.com/${pickString(item.username, item.Instagram_Username)}/` : '',
+    primary: pickNumber(item.views_day, item.Instagram_Views_Day, item.Instagram_Views_Total, item.views_total) ?? 0,
+    secondary: pickNumber(item.likes_day, item.Instagram_Likes_Day, item.Instagram_Likes_Total, item.likes_total) ?? 0,
+    tertiary: pickNumber(item.comments_day, item.Instagram_Comments_Day, item.Instagram_Comments_Total, item.comments_total) ?? 0,
+    quaternary: pickNumber(item.saved_day, item.Instagram_Saved_Day, item.Instagram_Saved_Total, item.saved_total) ?? 0,
+  }));
+
+  return buildProjectPlatformStats(
+    'instagram',
+    response,
+    { primary: 'Просмотры', secondary: 'Лайки', tertiary: 'Комментарии', quaternary: 'Сохранения' },
+    rows,
+    dateFrom,
+    dateTo,
+    fallbackProjectId
+  );
+}
+
+export function normalizeTikTokProjectStats(response: any, dateFrom = '', dateTo = '', fallbackProjectId = 0): ProjectPlatformStats {
+  const items = unwrapItems(response);
+  const rows = items.map((item): ProjectMetricRow => ({
+    project_id: pickNumber(item.ProjectID, item.project_id, fallbackProjectId) ?? 0,
+    project_name: pickString(item.ProjectName, item.project_name) ?? 'Проект',
+    metric_date: normalizeMetricDate(item.stat_date, item.Stat_Date, item.collected_at),
+    label: pickString(item.channel_name, item.TikTok_Channel_Name, item.ProjectName) ?? 'TikTok',
+    url: pickString(item.channel_url, item.TikTok_Channel_URL) ?? '',
+    primary: pickNumber(item.views_growth, item.TikTok_Views_Growth, item.TikTok_Total_Views, item.total_views) ?? 0,
+    secondary: pickNumber(item.likes_growth, item.TikTok_Likes_Growth, item.TikTok_Total_Likes, item.total_likes) ?? 0,
+    tertiary: pickNumber(item.comments_growth, item.TikTok_Comments_Growth, item.TikTok_Total_Comments, item.total_comments) ?? 0,
+    quaternary: pickNumber(item.shares_growth, item.TikTok_Shares_Growth, item.TikTok_Total_Shares, item.total_shares) ?? 0,
+  }));
+
+  return buildProjectPlatformStats(
+    'tiktok',
+    response,
+    { primary: 'Просмотры', secondary: 'Лайки', tertiary: 'Комментарии', quaternary: 'Шеры' },
+    rows,
+    dateFrom,
+    dateTo,
+    fallbackProjectId
+  );
 }
 
 export function normalizeVisits(resp: VisitsResponse): UnifiedVisitsRow[] {

@@ -2,37 +2,27 @@ import { ChangeDetectionStrategy, Component, OnInit, signal } from '@angular/cor
 import { NgFor, NgIf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CountUpDirective } from '../../shared/directives/count-up.directive';
-import { ProjectPeriodLineChartComponent } from '../../shared/ui/project-period-line-chart/project-period-line-chart';
 import { forkJoin } from 'rxjs';
 import {
   TikTokAccountTotals,
   TikTokTotal,
-  Project,
-  EpisodeInfo,
   YoutubeChannel,
-  YandexProjectsGroupItem,
   YandexTotal,
   InstagramAccount,
   TikTokPeriodMetric,
   YoutubeReleaseMetric,
 } from '../../shared/services/ssm-models';
-import { ProjectsApiService } from '../../shared/services/projects-api.service';
 import { AnalyticsApiService } from '../../shared/services/analytics-api.service';
 
 @Component({
   selector: 'app-dashboard-page',
   standalone: true,
-  imports: [NgFor, NgIf, FormsModule, CountUpDirective, ProjectPeriodLineChartComponent],
+  imports: [NgFor, NgIf, FormsModule, CountUpDirective],
   templateUrl: './dashboard-page.html',
   styleUrl: './dashboard-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DashboardPageComponent implements OnInit {
-  projects = signal<Project[]>([]);
-  selectedProjectId: string = '';
-
-  loadingProjects = signal(false);
-  loadingInfo = signal(false);
   error = signal<string | null>(null);
   periodError = signal<string | null>(null);
 
@@ -40,12 +30,6 @@ export class DashboardPageComponent implements OnInit {
   dateTo = '';
   appliedDateFrom = '';
   appliedDateTo = '';
-
-  episodes = signal<EpisodeInfo[]>([]);
-  projectPeriodMetrics = signal<YoutubeReleaseMetric[]>([]);
-  totalViews = 0;
-  totalLikes = 0;
-  totalComments = 0;
 
   loadingChannels = signal(false);
   channelsError = signal<string | null>(null);
@@ -69,7 +53,6 @@ export class DashboardPageComponent implements OnInit {
 
   loadingYandex = signal(false);
   yandexError = signal<string | null>(null);
-  yandexProjects = signal<YandexProjectsGroupItem[]>([]);
   yandexTotal: YandexTotal = { total_count: 0, total_kz_count: 0, url_count: 0 };
 
   activePlatform = signal<'youtube' | 'instagram' | 'yandex' | 'tiktok'>('youtube');
@@ -88,13 +71,9 @@ export class DashboardPageComponent implements OnInit {
     total_views: 0,
   };
 
-  constructor(
-    private projectsApi: ProjectsApiService,
-    private analyticsApi: AnalyticsApiService
-  ) {}
+  constructor(private analyticsApi: AnalyticsApiService) {}
 
   ngOnInit(): void {
-    this.loadProjects();
     this.loadYoutubeChannels();
     this.loadInstagramAccounts();
     this.loadYandexTotals();
@@ -118,25 +97,11 @@ export class DashboardPageComponent implements OnInit {
 
   get activeLoading(): boolean {
     switch (this.activePlatform()) {
-      case 'youtube': return this.loadingProjects() || this.loadingInfo() || this.loadingChannels();
+      case 'youtube': return this.loadingChannels();
       case 'instagram': return this.loadingInstagram();
       case 'yandex': return this.loadingYandex();
       case 'tiktok': return this.loadingTikTok();
     }
-  }
-
-  get selectedProjectLabel() {
-    const projectId = Number(this.selectedProjectId);
-    const project = this.projects().find((item) => Number(item.id) === projectId);
-    return project?.name || project?.utm_name || 'проект не выбран';
-  }
-
-  get hasEpisodes() {
-    return this.episodes().length > 0;
-  }
-
-  get hasProjectPeriodMetrics() {
-    return this.projectPeriodMetrics().length > 0;
   }
 
   get periodActive() {
@@ -145,14 +110,6 @@ export class DashboardPageComponent implements OnInit {
 
   get periodLabel() {
     return this.periodActive ? `${this.appliedDateFrom} - ${this.appliedDateTo}` : 'за всё время';
-  }
-
-  get projectPanelTitle() {
-    return this.periodActive ? 'Ролики проекта' : 'Эпизоды';
-  }
-
-  get projectCountHint() {
-    return this.periodActive ? 'ролики проекта' : 'в проекте';
   }
 
   get youtubeTotalsHint() {
@@ -173,38 +130,6 @@ export class DashboardPageComponent implements OnInit {
 
   get youtubeLastColumnLabel() {
     return this.periodActive ? 'Новые подписчики' : 'За квартал';
-  }
-
-  loadProjects(force = false) {
-    this.loadingProjects.set(true);
-    this.error.set(null);
-
-    this.projectsApi.getProjects(force).subscribe({
-      next: (list) => {
-        this.projects.set(list ?? []);
-
-        const projects = this.projects();
-        if (projects.length && !this.selectedProjectId) {
-          this.selectedProjectId = String(projects[0].id);
-        }
-
-        this.loadingProjects.set(false);
-
-        this.loadProjectInfo(force);
-      },
-      error: (e: any) => {
-        this.error.set(e?.message ?? 'Не удалось загрузить проекты');
-        this.loadingProjects.set(false);
-      },
-    });
-  }
-
-  onProjectChange() {
-    this.loadProjectInfo();
-  }
-
-  refreshProjectInfo() {
-    this.loadProjectInfo(true);
   }
 
   applyPeriod() {
@@ -231,58 +156,11 @@ export class DashboardPageComponent implements OnInit {
     this.dateTo = '';
     this.appliedDateFrom = '';
     this.appliedDateTo = '';
-    this.projectPeriodMetrics.set([]);
     this.periodError.set(null);
 
     if (wasActive) {
       this.reloadPeriodAwareData(true);
     }
-  }
-
-  loadProjectInfo(force = false) {
-    let id = Number(this.selectedProjectId);
-
-    const projects = this.projects();
-    if (!id && projects.length) {
-      id = Number(projects[0].id);
-      this.selectedProjectId = String(id);
-    }
-
-    if (!id) return;
-
-    this.loadingInfo.set(true);
-    this.error.set(null);
-
-    if (this.periodActive) {
-      forkJoin({
-        period: this.analyticsApi.getYoutubeProjectReleaseMetrics(id, this.appliedDateFrom, this.appliedDateTo),
-        episodes: this.projectsApi.getProjectInfo(id, force),
-      }).subscribe({
-        next: ({ period, episodes }) => {
-          this.projectPeriodMetrics.set(period.items);
-          this.setProjectRows(episodes ?? []);
-          this.setProjectTotalsFromMetrics(period.items);
-          this.loadingInfo.set(false);
-        },
-        error: (e: any) => {
-          this.error.set(e?.message ?? 'Не удалось загрузить данные проекта за период');
-          this.loadingInfo.set(false);
-        },
-      });
-      return;
-    }
-
-    this.projectsApi.getProjectInfo(id, force).subscribe({
-      next: (rows) => {
-        this.projectPeriodMetrics.set([]);
-        this.setProjectRows(rows ?? []);
-        this.loadingInfo.set(false);
-      },
-      error: (e: any) => {
-        this.error.set(e?.message ?? 'Не удалось загрузить данные проекта');
-        this.loadingInfo.set(false);
-      },
-    });
   }
 
   fmt(n: number) {
@@ -299,15 +177,6 @@ export class DashboardPageComponent implements OnInit {
 
   tiktokUrl(url: string) {
     return url || '#';
-  }
-
-  avgPerUrl(total: number, count: number) {
-    if (!count) return 0;
-    return Math.round(total / count);
-  }
-
-  toNum(v: any): number {
-    return Number(v) || 0;
   }
 
   private loadYoutubeChannels(force = false) {
@@ -374,15 +243,9 @@ export class DashboardPageComponent implements OnInit {
     this.loadingYandex.set(true);
     this.yandexError.set(null);
 
-    forkJoin({
-      total: this.analyticsApi.getYandexTotal(force),
-      projects: this.analyticsApi.getYandexProjects(force),
-    }).subscribe({
-      next: ({ total, projects }) => {
+    this.analyticsApi.getYandexTotal(force).subscribe({
+      next: (total) => {
         this.yandexTotal = total;
-        this.yandexProjects.set([...(projects ?? [])]
-          .sort((a, b) => b.total_count - a.total_count)
-          .slice(0, 10));
         this.loadingYandex.set(false);
       },
       error: (e: any) => {
@@ -428,25 +291,9 @@ export class DashboardPageComponent implements OnInit {
   }
 
   private reloadPeriodAwareData(force = false) {
-    this.loadProjectInfo(force);
     this.loadYoutubeChannels(force);
     this.loadInstagramAccounts(force);
     this.loadTikTokTotals(force);
-  }
-
-  private setProjectRows(rows: EpisodeInfo[]) {
-    this.episodes.set(rows);
-    const episodes = this.episodes();
-
-    this.totalViews = episodes.reduce((s, x) => s + (Number(x.youtube_views) || 0), 0);
-    this.totalLikes = episodes.reduce((s, x) => s + (Number(x.youtube_likes) || 0), 0);
-    this.totalComments = episodes.reduce((s, x) => s + (Number(x.youtube_comments) || 0), 0);
-  }
-
-  private setProjectTotalsFromMetrics(rows: YoutubeReleaseMetric[]) {
-    this.totalViews = rows.reduce((sum, row) => sum + row.views, 0);
-    this.totalLikes = rows.reduce((sum, row) => sum + row.likes, 0);
-    this.totalComments = rows.reduce((sum, row) => sum + row.comments, 0);
   }
 
   private setYoutubeChannels(items: YoutubeChannel[], periodMode: boolean) {

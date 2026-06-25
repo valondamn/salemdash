@@ -4,12 +4,12 @@
       <span class="eyebrow">Итоги YouTube</span>
       <h2>{{ headline }}</h2>
     </div>
-    <div class="context-chip">Эпизодов: {{ episodes.length }}</div>
+    <div class="context-chip">Строк: {{ episodes.length }}</div>
   </section>
 
   <section class="stats-grid" *ngIf="episodes.length">
     <div class="stat card accent-cyan">
-      <div class="label">Эпизоды</div>
+      <div class="label">Строки</div>
       <div class="value">{{ episodes.length }}</div>
       <div class="hint muted">доступно</div>
     </div>
@@ -33,7 +33,7 @@
     </div>
 
     <div class="stat card accent-violet">
-      <div class="label">Средний просмотр / эпизод</div>
+      <div class="label">Средний просмотр / строку</div>
       <div class="value">{{ fmtCompact(avgViews) }}</div>
       <div class="hint muted">среднее значение</div>
     </div>
@@ -49,7 +49,7 @@
     <section class="card panel chart-panel">
       <div class="panel-head">
         <div>
-          <div class="panel-title">Вовлечённость по эпизодам</div>
+          <div class="panel-title">Вовлечённость по датам</div>
         </div>
         <div class="panel-tag">%</div>
       </div>
@@ -59,14 +59,14 @@
     <section class="card panel">
       <div class="panel-head">
         <div>
-          <div class="panel-title">Лучшие эпизоды</div>
+          <div class="panel-title">Лучшие строки</div>
         </div>
         <div class="panel-tag">Топ 5</div>
       </div>
 
       <div class="table modern-table">
         <div class="row headrow">
-          <div>Эпизод</div>
+          <div>Дата / источник</div>
           <div>Просмотры</div>
           <div>Лайки</div>
           <div>Комментарии</div>
@@ -75,7 +75,7 @@
         <div class="row" *ngFor="let episode of topEpisodes; let index = index">
           <div class="episode-cell">
             <span class="rank-chip">#{{ index + 1 }}</span>
-            <span class="ep">{{ episode.episode_name || '—' }}</span>
+            <span class="ep">{{ rowTitle(episode) }}</span>
           </div>
           <div>{{ fmt(episode.youtube_views || 0) }}</div>
           <div>{{ fmt(episode.youtube_likes || 0) }}</div>
@@ -93,5 +93,33 @@
       <div class="panel-tag" *ngIf="loadingInfo">Обновляем...</div>
     </div>
     <app-episodes-chart [episodes]="episodes"></app-episodes-chart>
+  </section>
+
+  <section class="card panel">
+    <div class="panel-head">
+      <div>
+        <div class="panel-title">Все данные за период</div>
+      </div>
+      <div class="panel-tag">{{ episodes.length }} строк</div>
+    </div>
+
+    <div class="table modern-table">
+      <div class="row headrow">
+        <div>Дата / источник</div>
+        <div>Просмотры</div>
+        <div>Лайки</div>
+        <div>Комментарии</div>
+      </div>
+
+      <div class="row" *ngFor="let episode of sortedEpisodes()">
+        <div class="episode-cell">
+          <span class="rank-chip">{{ dateLabel(episode) }}</span>
+          <span class="ep">{{ rowTitle(episode) }}</span>
+        </div>
+        <div>{{ fmt(episode.youtube_views || 0) }}</div>
+        <div>{{ fmt(episode.youtube_likes || 0) }}</div>
+        <div>{{ fmt(episode.youtube_comments || 0) }}</div>
+      </div>
+    </div>
   </section>
 </div>

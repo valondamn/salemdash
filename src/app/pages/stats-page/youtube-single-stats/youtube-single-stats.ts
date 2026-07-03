@@ -47,7 +47,23 @@ export class YoutubeSingleStatsComponent {
   }
 
   rowTitle(episode: EpisodeInfo) {
-    return episode.episode_name || episode.youtube_channel || '—';
+    return episode.episode_name || episode.youtube_id || '—';
+  }
+
+  hasTitle(episode: EpisodeInfo) {
+    return !!episode.episode_name;
+  }
+
+  youtubeUrl(episode: EpisodeInfo) {
+    return episode.youtube_id
+      ? `https://www.youtube.com/watch?v=${episode.youtube_id}`
+      : null;
+  }
+
+  rowMeta(episode: EpisodeInfo) {
+    const date = this.dateLabel(episode);
+    const source = episode.youtube_channel || episode.project_name || 'YouTube';
+    return `${date} · ${source}`;
   }
 
   sortedEpisodes() {

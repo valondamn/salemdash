@@ -64,18 +64,19 @@
         <div class="panel-tag">Топ 5</div>
       </div>
 
-      <div class="table modern-table">
+      <div class="table modern-table top-episodes-table">
         <div class="row headrow">
-          <div>Дата / источник</div>
+          <div>Ролик</div>
           <div>Просмотры</div>
           <div>Лайки</div>
-          <div>Комментарии</div>
+          <div>Комм.</div>
         </div>
 
         <div class="row" *ngFor="let episode of topEpisodes; let index = index">
           <div class="episode-cell">
             <span class="rank-chip">#{{ index + 1 }}</span>
-            <span class="ep">{{ rowTitle(episode) }}</span>
+            <a *ngIf="youtubeUrl(episode)" class="ep" [class.ep--link]="!hasTitle(episode)" [href]="youtubeUrl(episode)!" target="_blank" rel="noreferrer">{{ rowTitle(episode) }}</a>
+            <span *ngIf="!youtubeUrl(episode)" class="ep">{{ rowTitle(episode) }}</span>
           </div>
           <div>{{ fmt(episode.youtube_views || 0) }}</div>
           <div>{{ fmt(episode.youtube_likes || 0) }}</div>
@@ -103,9 +104,10 @@
       <div class="panel-tag">{{ episodes.length }} строк</div>
     </div>
 
-    <div class="table modern-table">
+    <div class="table modern-table youtube-metric-table">
       <div class="row headrow">
-        <div>Дата / источник</div>
+        <div>Ролик</div>
+        <div>Дата выхода</div>
         <div>Просмотры</div>
         <div>Лайки</div>
         <div>Комментарии</div>
@@ -113,9 +115,10 @@
 
       <div class="row" *ngFor="let episode of sortedEpisodes()">
         <div class="episode-cell">
-          <span class="rank-chip">{{ dateLabel(episode) }}</span>
-          <span class="ep">{{ rowTitle(episode) }}</span>
+          <a *ngIf="youtubeUrl(episode)" class="ep" [href]="youtubeUrl(episode)!" target="_blank" rel="noreferrer">{{ rowTitle(episode) }}</a>
+          <span *ngIf="!youtubeUrl(episode)" class="ep">{{ rowTitle(episode) }}</span>
         </div>
+        <div class="muted">{{ dateLabel(episode) }}</div>
         <div>{{ fmt(episode.youtube_views || 0) }}</div>
         <div>{{ fmt(episode.youtube_likes || 0) }}</div>
         <div>{{ fmt(episode.youtube_comments || 0) }}</div>

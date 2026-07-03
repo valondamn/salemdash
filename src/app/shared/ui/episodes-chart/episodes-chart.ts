@@ -74,7 +74,7 @@ export class EpisodesChartComponent implements AfterViewInit, OnChanges {
     const views = list.map((e) => this.toNum(e.youtube_views));
     const likes = list.map((e) => this.toNum(e.youtube_likes));
     const comments = list.map((e) => this.toNum(e.youtube_comments));
-    const titles = list.map((e) => e.episode_name || '—');
+    const titles = list.map((e) => e.episode_name || e.youtube_channel || e.project_name || '');
     const dates = list.map((e) => this.pickDate(e) || '—');
 
     const option: echarts.EChartsOption = {
@@ -84,17 +84,20 @@ export class EpisodesChartComponent implements AfterViewInit, OnChanges {
           // params — массив серий в точке
           const i = params?.[0]?.dataIndex ?? 0;
 
-          const title = titles[i] ?? '—';
+          const title = titles[i] ?? '';
           const date = dates[i] ?? '—';
 
           const v = views[i] ?? 0;
           const l = likes[i] ?? 0;
           const c = comments[i] ?? 0;
 
+          const titleHtml = title
+            ? `<div style="font-weight:800;margin-bottom:6px">${this.shortTitle(title, 60)}</div>`
+            : '';
+
           return `
         <div style="max-width:360px">
-          <div style="font-weight:800;margin-bottom:6px">${this.shortTitle(title, 60)}</div>
-          <div style="opacity:.75;margin-bottom:8px">${date}</div>
+          ${titleHtml}<div style="opacity:.75;margin-bottom:8px">${date}</div>
           <div>Просмотры: <b>${this.fmtCompact(v)}</b></div>
           <div>Лайки: <b>${this.fmtCompact(l)}</b></div>
           <div>Комментарии: <b>${this.fmtCompact(c)}</b></div>

@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 
-import { Project, EpisodeInfo, InstagramAccount, YandexProjectAnalytics, TikTokTotal, TikTokAccountTotals, ProjectPlatformStats, ProjectMetricRow, YoutubeReleaseMetric } from '../../shared/services/ssm-models';
+import { Project, EpisodeInfo, InstagramAccount, YandexProjectAnalytics, TikTokTotal, TikTokAccountTotals, ProjectPlatformStats, ProjectMetricRow } from '../../shared/services/ssm-models';
 import { ProjectsApiService } from '../../shared/services/projects-api.service';
 import { AnalyticsApiService } from '../../shared/services/analytics-api.service';
 import {
@@ -201,8 +201,6 @@ export class StatsPageComponent implements OnInit {
 
   get currentLoading() {
     if (this.isProjectPlatformSource) return this.loadingInfo;
-    if (this.activeSource === 'instagram') return this.loadingInstagram;
-    if (this.activeSource === 'tiktok') return this.loadingTiktok;
     return this.loadingInfo;
   }
 
@@ -362,10 +360,10 @@ export class StatsPageComponent implements OnInit {
     this.error = null;
     this.startInfoLoadTimer('Данные проекта загружаются дольше обычного. Попробуйте обновить ещё раз.');
 
-    this.analyticsApi.getYoutubeProjectReleaseMetrics(id, this.appliedDateFrom, this.appliedDateTo).subscribe({
-      next: (period) => {
+    this.projectsApi.getProjectInfo(id, force).subscribe({
+      next: (allEpisodes) => {
         this.clearInfoLoadTimer();
-        this.episodes = this.mapYoutubePeriodRows(period.items, id);
+        this.episodes = this.filterByPeriod(allEpisodes);
         this.computeYouTubeSingle();
         this.loadingInfo = false;
         this.cdr.detectChanges();
@@ -432,13 +430,13 @@ export class StatsPageComponent implements OnInit {
     this.startInfoLoadTimer('Сравнение проектов загружается дольше обычного. Попробуйте обновить ещё раз.');
 
     forkJoin([
-      this.analyticsApi.getYoutubeProjectReleaseMetrics(aId, this.appliedDateFrom, this.appliedDateTo),
-      this.analyticsApi.getYoutubeProjectReleaseMetrics(bId, this.appliedDateFrom, this.appliedDateTo),
+      this.projectsApi.getProjectInfo(aId, force),
+      this.projectsApi.getProjectInfo(bId, force),
     ]).subscribe({
-      next: ([projectA, projectB]) => {
+      next: ([allA, allB]) => {
         this.clearInfoLoadTimer();
-        this.episodesA = this.mapYoutubePeriodRows(projectA.items, aId);
-        this.episodesB = this.mapYoutubePeriodRows(projectB.items, bId);
+        this.episodesA = this.filterByPeriod(allA);
+        this.episodesB = this.filterByPeriod(allB);
         this.kpiA = this.computeKpi(this.episodesA);
         this.kpiB = this.computeKpi(this.episodesB);
         this.loadingInfo = false;
@@ -831,7 +829,7 @@ export class StatsPageComponent implements OnInit {
   }
 
   metricDateLabel(row: ProjectMetricRow) {
-    return row.metric_date || row.label || '—';
+    return row.metric_date || '—';
   }
 
   projectStatRowTitle(row: ProjectMetricRow) {
@@ -988,6 +986,23 @@ export class StatsPageComponent implements OnInit {
       .slice(0, 5);
   }
 
+  private filterByPeriod(episodes: EpisodeInfo[]): EpisodeInfo[] {
+    const from = this.appliedDateFrom;
+    const to = this.appliedDateTo;
+    if (!from && !to) return episodes;
+
+    const filtered = episodes.filter((ep) => {
+      const date = (ep.youtube_release_date || ep.release_date || '').slice(0, 10);
+      if (!date) return true;
+      if (from && date < from) return false;
+      if (to && date > to) return false;
+      return true;
+    });
+
+    // Если за период нет видео — показываем все (чтобы проект не был пустым)
+    return filtered.length > 0 ? filtered : episodes;
+  }
+
   private computeKpi(episodes: EpisodeInfo[]) {
     const views = episodes.reduce((sum, episode) => sum + (Number(episode.youtube_views) || 0), 0);
     const likes = episodes.reduce((sum, episode) => sum + (Number(episode.youtube_likes) || 0), 0);
@@ -1028,24 +1043,6 @@ export class StatsPageComponent implements OnInit {
 
   private pickEpisodeDate(episode: EpisodeInfo) {
     return (episode.youtube_release_date || episode.release_date || '').slice(0, 10);
-  }
-
-  private mapYoutubePeriodRows(rows: YoutubeReleaseMetric[], projectId: number): EpisodeInfo[] {
-    return (rows ?? []).map((row, index) => ({
-      id: index + 1,
-      project_id: projectId,
-      project_name: row.project_name,
-      episode_name: row.channel_name ? `${row.metric_date} · ${row.channel_name}` : row.metric_date,
-      youtube_channel: row.channel_name,
-      youtube_views: row.views,
-      youtube_likes: row.likes,
-      youtube_comments: row.comments,
-      release_date: row.metric_date,
-      youtube_release_date: row.metric_date,
-      subscribers_gained: row.subscribers_gained,
-      subscribers_lost: row.subscribers_lost,
-      subscribers_net: row.subscribers_net,
-    }));
   }
 
   private youtubeDateLabels(...episodeGroups: EpisodeInfo[][]): string[] {

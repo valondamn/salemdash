@@ -174,6 +174,8 @@ export function normalizeYoutubeChannel(item: YoutubeChannelApiItem): YoutubeCha
 export function normalizeYoutubeReleaseMetric(item: YoutubeReleaseMetricApiItem): YoutubeReleaseMetric {
   return {
     project_name: pickString(item.ProjectName) ?? '',
+    episode_name: pickString(item.EpisodesName, item.episode_name, item.video_title, item.title) ?? '',
+    youtube_id: pickString(item.YouTubeID, item.youtube_id) ?? '',
     channel_name: pickString(item.channel_name) ?? 'YouTube',
     metric_date: pickString(item.metric_date) ?? '',
     views: pickNumber(item.views) ?? 0,

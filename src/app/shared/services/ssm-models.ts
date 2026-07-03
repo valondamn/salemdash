@@ -205,6 +205,12 @@ export type YoutubeChannel = {
 
 export type YoutubeReleaseMetricApiItem = {
   ProjectName?: string;
+  EpisodesName?: string;
+  episode_name?: string;
+  title?: string;
+  video_title?: string;
+  YouTubeID?: string;
+  youtube_id?: string;
   channel_name?: string;
   comments?: number | string;
   likes?: number | string;
@@ -230,6 +236,8 @@ export type YoutubeReleasePeriodApiResponse = {
 
 export type YoutubeReleaseMetric = {
   project_name: string;
+  episode_name: string;
+  youtube_id: string;
   channel_name: string;
   metric_date: string;
   views: number;

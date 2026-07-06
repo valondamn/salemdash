@@ -540,9 +540,17 @@ h2 {
 
 .episode-cell {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
   min-width: 0;
+}
+
+.ep-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
 }
 
 .rank-chip {
@@ -582,6 +590,41 @@ a.ep--link:hover,
 a.ep--titled:hover {
   text-decoration: underline;
   opacity: 1;
+}
+
+/* Бейдж канала под названием эпизода */
+.channel-chip {
+  display: inline-block;
+  align-self: flex-start;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 4px;
+  background: rgba(139, 92, 246, 0.18);
+  color: rgba(167, 139, 250, 0.85);
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+/* Панель фильтра по каналу */
+.channel-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0 8px;
+
+  .channel-filter-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+
+  .channel-filter-hint {
+    font-size: 12px;
+  }
 }
 
 .profile-link {

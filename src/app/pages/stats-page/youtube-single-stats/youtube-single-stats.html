@@ -4,13 +4,25 @@
       <span class="eyebrow">Итоги YouTube</span>
       <h2>{{ headline }}</h2>
     </div>
-    <div class="context-chip">Строк: {{ episodes.length }}</div>
+    <div class="context-chip">Строк: {{ filteredEpisodes.length }}</div>
   </section>
 
-  <section class="stats-grid" *ngIf="episodes.length">
+  <!-- Фильтр по каналу — показывается только если у проекта 2+ канала -->
+  <div class="channel-filter-bar" *ngIf="hasMultipleChannels">
+    <span class="channel-filter-label">Канал</span>
+    <select class="select compact-select" [(ngModel)]="selectedChannel">
+      <option value="all">Все каналы ({{ episodes.length }} строк)</option>
+      <option *ngFor="let ch of availableChannels" [value]="ch">{{ ch }}</option>
+    </select>
+    <span class="channel-filter-hint muted" *ngIf="selectedChannel !== 'all'">
+      {{ filteredEpisodes.length }} из {{ episodes.length }} строк
+    </span>
+  </div>
+
+  <section class="stats-grid" *ngIf="filteredEpisodes.length">
     <div class="stat card accent-cyan">
       <div class="label">Строки</div>
-      <div class="value">{{ episodes.length }}</div>
+      <div class="value">{{ filteredEpisodes.length }}</div>
       <div class="hint muted">доступно</div>
     </div>
 
@@ -53,7 +65,7 @@
         </div>
         <div class="panel-tag">%</div>
       </div>
-      <app-engagement-chart [episodes]="episodes"></app-engagement-chart>
+      <app-engagement-chart [episodes]="filteredEpisodes"></app-engagement-chart>
     </section>
 
     <section class="card panel">
@@ -75,8 +87,11 @@
         <div class="row" *ngFor="let episode of topEpisodes; let index = index">
           <div class="episode-cell">
             <span class="rank-chip">#{{ index + 1 }}</span>
-            <a *ngIf="youtubeUrl(episode)" class="ep" [class.ep--link]="!hasTitle(episode)" [href]="youtubeUrl(episode)!" target="_blank" rel="noreferrer">{{ rowTitle(episode) }}</a>
-            <span *ngIf="!youtubeUrl(episode)" class="ep">{{ rowTitle(episode) }}</span>
+            <div class="ep-group">
+              <a *ngIf="youtubeUrl(episode)" class="ep" [class.ep--link]="!hasTitle(episode)" [href]="youtubeUrl(episode)!" target="_blank" rel="noreferrer">{{ rowTitle(episode) }}</a>
+              <span *ngIf="!youtubeUrl(episode)" class="ep">{{ rowTitle(episode) }}</span>
+              <span *ngIf="episode.youtube_channel" class="channel-chip">{{ episode.youtube_channel }}</span>
+            </div>
           </div>
           <div>{{ fmt(episode.youtube_views || 0) }}</div>
           <div>{{ fmt(episode.youtube_likes || 0) }}</div>
@@ -93,7 +108,7 @@
       </div>
       <div class="panel-tag" *ngIf="loadingInfo">Обновляем...</div>
     </div>
-    <app-episodes-chart [episodes]="episodes"></app-episodes-chart>
+    <app-episodes-chart [episodes]="filteredEpisodes"></app-episodes-chart>
   </section>
 
   <section class="card panel">
@@ -101,7 +116,7 @@
       <div>
         <div class="panel-title">Все данные за период</div>
       </div>
-      <div class="panel-tag">{{ episodes.length }} строк</div>
+      <div class="panel-tag">{{ filteredEpisodes.length }} строк</div>
     </div>
 
     <div class="table modern-table youtube-metric-table">
@@ -115,8 +130,11 @@
 
       <div class="row" *ngFor="let episode of sortedEpisodes()">
         <div class="episode-cell">
-          <a *ngIf="youtubeUrl(episode)" class="ep" [href]="youtubeUrl(episode)!" target="_blank" rel="noreferrer">{{ rowTitle(episode) }}</a>
-          <span *ngIf="!youtubeUrl(episode)" class="ep">{{ rowTitle(episode) }}</span>
+          <div class="ep-group">
+            <a *ngIf="youtubeUrl(episode)" class="ep" [href]="youtubeUrl(episode)!" target="_blank" rel="noreferrer">{{ rowTitle(episode) }}</a>
+            <span *ngIf="!youtubeUrl(episode)" class="ep">{{ rowTitle(episode) }}</span>
+            <span *ngIf="episode.youtube_channel" class="channel-chip">{{ episode.youtube_channel }}</span>
+          </div>
         </div>
         <div class="muted">{{ dateLabel(episode) }}</div>
         <div>{{ fmt(episode.youtube_views || 0) }}</div>

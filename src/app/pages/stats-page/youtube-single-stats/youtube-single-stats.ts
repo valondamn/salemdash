@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { NgFor, NgIf } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 
 import { EpisodesChartComponent } from '../../../shared/ui/episodes-chart/episodes-chart';
 import { EngagementChartComponent } from '../../../shared/ui/engagement-chart/engagement-chart';
@@ -8,21 +9,71 @@ import { EpisodeInfo } from '../../../shared/services/ssm-models';
 @Component({
   selector: 'app-youtube-single-stats',
   standalone: true,
-  imports: [NgFor, NgIf, EpisodesChartComponent, EngagementChartComponent],
+  imports: [NgFor, NgIf, FormsModule, EpisodesChartComponent, EngagementChartComponent],
   templateUrl: './youtube-single-stats.html',
   styleUrl: './youtube-single-stats.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class YoutubeSingleStatsComponent {
+export class YoutubeSingleStatsComponent implements OnChanges {
   @Input({ required: true }) headline = '';
   @Input({ required: true }) episodes: EpisodeInfo[] = [];
-  @Input({ required: true }) totalViews = 0;
-  @Input({ required: true }) totalLikes = 0;
-  @Input({ required: true }) totalComments = 0;
-  @Input({ required: true }) avgViews = 0;
-  @Input({ required: true }) engagementRate = 0;
-  @Input({ required: true }) topEpisodes: EpisodeInfo[] = [];
   @Input({ required: true }) loadingInfo = false;
+
+  selectedChannel = 'all';
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['episodes'] && this.selectedChannel !== 'all') {
+      if (!this.availableChannels.includes(this.selectedChannel)) {
+        this.selectedChannel = 'all';
+      }
+    }
+  }
+
+  get availableChannels(): string[] {
+    return [...new Set(
+      (this.episodes ?? [])
+        .map(e => e.youtube_channel)
+        .filter((c): c is string => !!c)
+    )].sort();
+  }
+
+  get hasMultipleChannels(): boolean {
+    return this.availableChannels.length > 1;
+  }
+
+  get filteredEpisodes(): EpisodeInfo[] {
+    if (this.selectedChannel === 'all') return this.episodes ?? [];
+    return (this.episodes ?? []).filter(e => e.youtube_channel === this.selectedChannel);
+  }
+
+  get totalViews(): number {
+    return this.filteredEpisodes.reduce((sum, e) => sum + (Number(e.youtube_views) || 0), 0);
+  }
+
+  get totalLikes(): number {
+    return this.filteredEpisodes.reduce((sum, e) => sum + (Number(e.youtube_likes) || 0), 0);
+  }
+
+  get totalComments(): number {
+    return this.filteredEpisodes.reduce((sum, e) => sum + (Number(e.youtube_comments) || 0), 0);
+  }
+
+  get avgViews(): number {
+    const eps = this.filteredEpisodes;
+    return eps.length ? Math.round(this.totalViews / eps.length) : 0;
+  }
+
+  get engagementRate(): number {
+    return this.totalViews
+      ? ((this.totalLikes + this.totalComments) / this.totalViews) * 100
+      : 0;
+  }
+
+  get topEpisodes(): EpisodeInfo[] {
+    return [...this.filteredEpisodes]
+      .sort((a, b) => (Number(b.youtube_views) || 0) - (Number(a.youtube_views) || 0))
+      .slice(0, 5);
+  }
 
   fmt(value: number) {
     return Intl.NumberFormat('ru-RU').format(value);
@@ -67,6 +118,6 @@ export class YoutubeSingleStatsComponent {
   }
 
   sortedEpisodes() {
-    return [...(this.episodes ?? [])].sort((a, b) => this.dateLabel(a).localeCompare(this.dateLabel(b)));
+    return [...this.filteredEpisodes].sort((a, b) => this.dateLabel(a).localeCompare(this.dateLabel(b)));
   }
 }

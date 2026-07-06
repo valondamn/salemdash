@@ -45,12 +45,6 @@ export class StatsPageComponent implements OnInit {
   selectedProjectId = '';
 
   episodes: EpisodeInfo[] = [];
-  totalViews = 0;
-  totalLikes = 0;
-  totalComments = 0;
-  avgViews = 0;
-  engagementRate = 0;
-  topEpisodes: EpisodeInfo[] = [];
 
   projectAId = '';
   projectBId = '';
@@ -364,7 +358,6 @@ export class StatsPageComponent implements OnInit {
       next: (allEpisodes) => {
         this.clearInfoLoadTimer();
         this.episodes = this.filterByPeriod(allEpisodes);
-        this.computeYouTubeSingle();
         this.loadingInfo = false;
         this.cdr.detectChanges();
       },
@@ -972,18 +965,6 @@ export class StatsPageComponent implements OnInit {
 
   private findInstagramAccount(id: string) {
     return this.instagramAccounts.find((account) => account.id === id) ?? null;
-  }
-
-  private computeYouTubeSingle() {
-    const episodes = this.episodes;
-    this.totalViews = episodes.reduce((sum, episode) => sum + (Number(episode.youtube_views) || 0), 0);
-    this.totalLikes = episodes.reduce((sum, episode) => sum + (Number(episode.youtube_likes) || 0), 0);
-    this.totalComments = episodes.reduce((sum, episode) => sum + (Number(episode.youtube_comments) || 0), 0);
-    this.avgViews = episodes.length ? Math.round(this.totalViews / episodes.length) : 0;
-    this.engagementRate = this.totalViews ? ((this.totalLikes + this.totalComments) / this.totalViews) * 100 : 0;
-    this.topEpisodes = [...episodes]
-      .sort((a, b) => (Number(b.youtube_views) || 0) - (Number(a.youtube_views) || 0))
-      .slice(0, 5);
   }
 
   private filterByPeriod(episodes: EpisodeInfo[]): EpisodeInfo[] {

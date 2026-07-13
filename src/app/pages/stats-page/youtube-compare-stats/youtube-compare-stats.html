@@ -1,14 +1,22 @@
 <div class="main-content">
   <section class="compare-hero card">
     <div>
-      <span class="eyebrow">Сравнение YouTube</span>
+      <span class="eyebrow">{{ kind === 'periods' ? 'Сравнение периодов' : 'Сравнение роликов' }}</span>
       <h2>{{ primaryLabel }} против {{ secondaryLabel }}</h2>
       <p class="muted">{{ summary }}</p>
     </div>
 
     <div class="duel-chips">
-      <div class="project-chip chip-a">{{ primaryLabel }}</div>
-      <div class="project-chip chip-b">{{ secondaryLabel }}</div>
+      <div class="project-chip chip-a">
+        <span>A</span>
+        <strong>{{ primaryLabel }}</strong>
+        <small>{{ contextA }}</small>
+      </div>
+      <div class="project-chip chip-b">
+        <span>B</span>
+        <strong>{{ secondaryLabel }}</strong>
+        <small>{{ contextB }}</small>
+      </div>
     </div>
   </section>
 
@@ -35,11 +43,12 @@
     </article>
   </section>
 
-  <section class="grid-2">
+  <section class="grid-2" *ngIf="kind === 'periods'">
     <section class="card panel chart-panel">
       <div class="panel-head">
         <div>
-          <div class="panel-title">Динамика просмотров по датам</div>
+          <div class="panel-title">Просмотры по дням периода</div>
+          <p class="panel-copy muted">День 1 сопоставляется с днём 1, независимо от календарной даты.</p>
         </div>
       </div>
       <app-comparison-line-chart
@@ -48,6 +57,8 @@
         [seriesB]="viewSeriesB"
         [nameA]="primaryLabel"
         [nameB]="secondaryLabel"
+        [tooltipLabelsA]="dateLabelsA"
+        [tooltipLabelsB]="dateLabelsB"
         format="number"
       ></app-comparison-line-chart>
     </section>
@@ -55,7 +66,8 @@
     <section class="card panel chart-panel">
       <div class="panel-head">
         <div>
-          <div class="panel-title">Вовлечённость по датам</div>
+          <div class="panel-title">Вовлечённость по дням периода</div>
+          <p class="panel-copy muted">Лайки и комментарии относительно просмотров за каждый день.</p>
         </div>
       </div>
       <app-comparison-line-chart
@@ -64,6 +76,8 @@
         [seriesB]="engagementSeriesB"
         [nameA]="primaryLabel"
         [nameB]="secondaryLabel"
+        [tooltipLabelsA]="dateLabelsA"
+        [tooltipLabelsB]="dateLabelsB"
         format="percent"
       ></app-comparison-line-chart>
     </section>
@@ -72,7 +86,10 @@
   <section class="card compare-detail">
     <div class="panel-head">
       <div>
-        <div class="panel-title">Подробное сравнение</div>
+        <div class="panel-title">Все показатели</div>
+        <p class="panel-copy muted">
+          {{ kind === 'periods' ? 'Итоги за каждый выбранный период.' : 'Накопленные показатели выбранных роликов.' }}
+        </p>
       </div>
     </div>
 

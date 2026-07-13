@@ -1,10 +1,22 @@
 import { ChangeDetectorRef, Component, NgZone, OnInit, ViewEncapsulation } from '@angular/core';
 import { NgFor, NgIf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { NgSelectComponent } from '@ng-select/ng-select';
 import { forkJoin } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 
-import { Project, EpisodeInfo, InstagramAccount, YandexProjectAnalytics, TikTokTotal, TikTokAccountTotals, ProjectPlatformStats, ProjectMetricRow } from '../../shared/services/ssm-models';
+import {
+  Project,
+  EpisodeInfo,
+  InstagramAccount,
+  YandexProjectAnalytics,
+  TikTokTotal,
+  TikTokAccountTotals,
+  ProjectPlatformStats,
+  ProjectMetricRow,
+  YoutubeReleaseMetric,
+  YoutubeReleasePeriod,
+} from '../../shared/services/ssm-models';
 import { ProjectsApiService } from '../../shared/services/projects-api.service';
 import { AnalyticsApiService } from '../../shared/services/analytics-api.service';
 import {
@@ -25,6 +37,7 @@ import { YoutubeCompareStatsComponent } from './youtube-compare-stats/youtube-co
     NgFor,
     NgIf,
     FormsModule,
+    NgSelectComponent,
     YoutubeSingleStatsComponent,
     YoutubeCompareStatsComponent,
   ],
@@ -50,6 +63,20 @@ export class StatsPageComponent implements OnInit {
   projectBId = '';
   episodesA: EpisodeInfo[] = [];
   episodesB: EpisodeInfo[] = [];
+  youtubeCompareKind: 'periods' | 'episodes' = 'periods';
+  youtubeCompareAFrom = '';
+  youtubeCompareATo = '';
+  youtubeCompareBFrom = '';
+  youtubeCompareBTo = '';
+  youtubeEpisodeAKey = '';
+  youtubeEpisodeBKey = '';
+  youtubeEpisodeOptionsA: EpisodeInfo[] = [];
+  youtubeEpisodeOptionsB: EpisodeInfo[] = [];
+  youtubePeriodA: YoutubeReleasePeriod | null = null;
+  youtubePeriodB: YoutubeReleasePeriod | null = null;
+  youtubeComparisonReady = false;
+  loadingYoutubeEpisodesA = false;
+  loadingYoutubeEpisodesB = false;
 
   projectStatsId = 'all';
   projectStatsAId = '';
@@ -106,7 +133,37 @@ export class StatsPageComponent implements OnInit {
   }
 
   get hasYoutubeCompareData() {
-    return this.episodesA.length > 0 || this.episodesB.length > 0;
+    return this.youtubeComparisonReady;
+  }
+
+  get youtubeEpisodeChoicesA() {
+    return this.youtubeEpisodeOptionsA.map((episode) => this.toEpisodeChoice(episode));
+  }
+
+  get youtubeEpisodeChoicesB() {
+    return this.youtubeEpisodeOptionsB.map((episode) => this.toEpisodeChoice(episode));
+  }
+
+  get youtubeCompareCanRun() {
+    if (!this.projectAId || !this.projectBId || this.loadingInfo) return false;
+
+    if (this.youtubeCompareKind === 'episodes') {
+      return Boolean(
+        this.youtubeEpisodeAKey &&
+        this.youtubeEpisodeBKey &&
+        !this.loadingYoutubeEpisodesA &&
+        !this.loadingYoutubeEpisodesB
+      );
+    }
+
+    return Boolean(
+      this.youtubeCompareAFrom &&
+      this.youtubeCompareATo &&
+      this.youtubeCompareBFrom &&
+      this.youtubeCompareBTo &&
+      this.youtubeCompareAFrom <= this.youtubeCompareATo &&
+      this.youtubeCompareBFrom <= this.youtubeCompareBTo
+    );
   }
 
   get hasYandexData() {
@@ -203,7 +260,8 @@ export class StatsPageComponent implements OnInit {
 
     if (this.mode === 'compare') {
       if (source === 'youtube') {
-        this.loadCompareYouTube();
+        this.invalidateYoutubeComparison();
+        if (this.youtubeCompareKind === 'episodes') this.prepareYoutubeEpisodeOptions();
       } else if (this.isProjectPlatformSource) {
         this.loadCompareProjectPlatformStats();
       }
@@ -225,7 +283,8 @@ export class StatsPageComponent implements OnInit {
         if (!this.projectAId && this.projects.length) this.projectAId = String(this.projects[0].id);
         if (!this.projectBId && this.projects.length > 1) this.projectBId = String(this.projects[1].id);
         if (!this.projectBId && this.projects.length) this.projectBId = String(this.projects[0].id);
-        this.loadCompareYouTube();
+        this.invalidateYoutubeComparison();
+        if (this.youtubeCompareKind === 'episodes') this.prepareYoutubeEpisodeOptions();
       } else if (this.isProjectPlatformSource) {
         this.ensureProjectStatsCompareDefaults();
         this.loadCompareProjectPlatformStats();
@@ -248,7 +307,7 @@ export class StatsPageComponent implements OnInit {
 
     if (this.activeSource === 'youtube') {
       if (this.mode === 'single') this.loadProjectInfo(true);
-      else this.loadCompareYouTube(true);
+      else this.runYoutubeComparison(true);
       return;
     }
 
@@ -321,7 +380,12 @@ export class StatsPageComponent implements OnInit {
         if (!this.projectBId && this.projects.length) this.projectBId = String(this.projects[0].id);
 
         if (this.activeSource === 'youtube') {
-          this.loadProjectInfo(force);
+          if (this.mode === 'compare') {
+            this.invalidateYoutubeComparison();
+            if (this.youtubeCompareKind === 'episodes') this.prepareYoutubeEpisodeOptions(force);
+          } else {
+            this.loadProjectInfo(force);
+          }
         } else if (this.isProjectPlatformSource) {
           this.loadProjectPlatformStats(force);
         }
@@ -371,7 +435,11 @@ export class StatsPageComponent implements OnInit {
   }
 
   onCompareProjectsChange() {
-    this.loadCompareYouTube();
+    this.invalidateYoutubeComparison();
+
+    if (this.youtubeCompareKind === 'episodes') {
+      this.prepareYoutubeEpisodeOptions();
+    }
   }
 
   onProjectStatsChange() {
@@ -400,7 +468,7 @@ export class StatsPageComponent implements OnInit {
 
     if (this.activeSource === 'youtube') {
       if (this.mode === 'single') this.loadProjectInfo(true);
-      else this.loadCompareYouTube(true);
+      else this.runYoutubeComparison(true);
       return;
     }
 
@@ -410,7 +478,36 @@ export class StatsPageComponent implements OnInit {
     else this.loadCompareProjectPlatformStats(true);
   }
 
-  loadCompareYouTube(force = false) {
+  setYoutubeCompareKind(kind: 'periods' | 'episodes') {
+    if (this.youtubeCompareKind === kind) return;
+
+    this.youtubeCompareKind = kind;
+    this.invalidateYoutubeComparison();
+
+    if (kind === 'episodes') {
+      this.prepareYoutubeEpisodeOptions();
+    }
+  }
+
+  runYoutubeComparison(force = false) {
+    this.error = null;
+
+    if (!this.projectAId || !this.projectBId) {
+      this.error = 'Выберите обе стороны сравнения.';
+      return;
+    }
+
+    if (this.youtubeCompareKind === 'episodes') {
+      if (force) {
+        this.prepareYoutubeEpisodeOptions(true, true);
+      } else {
+        this.runYoutubeEpisodeComparison();
+      }
+      return;
+    }
+
+    if (!this.validateYoutubeComparePeriods()) return;
+
     const aId = Number(this.projectAId);
     const bId = Number(this.projectBId);
     if (!aId || !bId) {
@@ -423,15 +520,18 @@ export class StatsPageComponent implements OnInit {
     this.startInfoLoadTimer('Сравнение проектов загружается дольше обычного. Попробуйте обновить ещё раз.');
 
     forkJoin([
-      this.projectsApi.getProjectInfo(aId, force),
-      this.projectsApi.getProjectInfo(bId, force),
+      this.analyticsApi.getYoutubeProjectReleaseMetrics(aId, this.youtubeCompareAFrom, this.youtubeCompareATo),
+      this.analyticsApi.getYoutubeProjectReleaseMetrics(bId, this.youtubeCompareBFrom, this.youtubeCompareBTo),
     ]).subscribe({
-      next: ([allA, allB]) => {
+      next: ([periodA, periodB]) => {
         this.clearInfoLoadTimer();
-        this.episodesA = this.filterByPeriod(allA);
-        this.episodesB = this.filterByPeriod(allB);
-        this.kpiA = this.computeKpi(this.episodesA);
-        this.kpiB = this.computeKpi(this.episodesB);
+        this.youtubePeriodA = periodA;
+        this.youtubePeriodB = periodB;
+        this.episodesA = [];
+        this.episodesB = [];
+        this.kpiA = this.computeYoutubePeriodKpi(periodA.items);
+        this.kpiB = this.computeYoutubePeriodKpi(periodB.items);
+        this.youtubeComparisonReady = true;
         this.loadingInfo = false;
         this.cdr.detectChanges();
       },
@@ -442,6 +542,88 @@ export class StatsPageComponent implements OnInit {
         this.cdr.detectChanges();
       },
     });
+  }
+
+  copyYoutubeProjectAToB() {
+    if (!this.projectAId) return;
+
+    this.projectBId = this.projectAId;
+    this.youtubeEpisodeBKey = '';
+    this.invalidateYoutubeComparison();
+
+    if (this.youtubeCompareKind === 'episodes') {
+      this.prepareYoutubeEpisodeOptions();
+    }
+  }
+
+  swapYoutubeCompareSides() {
+    [this.projectAId, this.projectBId] = [this.projectBId, this.projectAId];
+    [this.youtubeCompareAFrom, this.youtubeCompareBFrom] = [this.youtubeCompareBFrom, this.youtubeCompareAFrom];
+    [this.youtubeCompareATo, this.youtubeCompareBTo] = [this.youtubeCompareBTo, this.youtubeCompareATo];
+    [this.youtubeEpisodeAKey, this.youtubeEpisodeBKey] = [this.youtubeEpisodeBKey, this.youtubeEpisodeAKey];
+    [this.youtubeEpisodeOptionsA, this.youtubeEpisodeOptionsB] = [this.youtubeEpisodeOptionsB, this.youtubeEpisodeOptionsA];
+
+    if (this.youtubeComparisonReady) {
+      [this.youtubePeriodA, this.youtubePeriodB] = [this.youtubePeriodB, this.youtubePeriodA];
+      [this.episodesA, this.episodesB] = [this.episodesB, this.episodesA];
+      [this.kpiA, this.kpiB] = [this.kpiB, this.kpiA];
+    }
+  }
+
+  invalidateYoutubeComparison() {
+    this.youtubeComparisonReady = false;
+    this.error = null;
+  }
+
+  private prepareYoutubeEpisodeOptions(force = false, compareAfterLoad = false) {
+    const aId = Number(this.projectAId);
+    const bId = Number(this.projectBId);
+    if (!aId || !bId) return;
+
+    this.loadingYoutubeEpisodesA = true;
+    this.loadingYoutubeEpisodesB = true;
+    this.error = null;
+
+    forkJoin([
+      this.projectsApi.getProjectInfo(aId, force),
+      this.projectsApi.getProjectInfo(bId, force),
+    ]).subscribe({
+      next: ([episodesA, episodesB]) => {
+        this.youtubeEpisodeOptionsA = this.sortEpisodeOptions(episodesA);
+        this.youtubeEpisodeOptionsB = this.sortEpisodeOptions(episodesB);
+        this.youtubeEpisodeAKey = this.ensureEpisodeKey(this.youtubeEpisodeOptionsA, this.youtubeEpisodeAKey);
+        this.youtubeEpisodeBKey = this.ensureEpisodeKey(this.youtubeEpisodeOptionsB, this.youtubeEpisodeBKey);
+        this.loadingYoutubeEpisodesA = false;
+        this.loadingYoutubeEpisodesB = false;
+
+        if (compareAfterLoad) this.runYoutubeEpisodeComparison();
+        this.cdr.detectChanges();
+      },
+      error: (e: any) => {
+        this.loadingYoutubeEpisodesA = false;
+        this.loadingYoutubeEpisodesB = false;
+        this.error = e?.message ?? 'Не удалось загрузить список роликов';
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  private runYoutubeEpisodeComparison() {
+    const episodeA = this.findEpisodeByKey(this.youtubeEpisodeOptionsA, this.youtubeEpisodeAKey);
+    const episodeB = this.findEpisodeByKey(this.youtubeEpisodeOptionsB, this.youtubeEpisodeBKey);
+
+    if (!episodeA || !episodeB) {
+      this.error = 'Выберите ролик для каждой стороны сравнения.';
+      return;
+    }
+
+    this.youtubePeriodA = null;
+    this.youtubePeriodB = null;
+    this.episodesA = [episodeA];
+    this.episodesB = [episodeB];
+    this.kpiA = this.computeKpi(this.episodesA);
+    this.kpiB = this.computeKpi(this.episodesB);
+    this.youtubeComparisonReady = true;
   }
 
   loadInstagramAccounts(force = false) {
@@ -608,14 +790,57 @@ export class StatsPageComponent implements OnInit {
   }
 
   get youtubeCompareRows(): CompareMetricRow[] {
-    return [
+    const rows = [
       this.buildCompareMetric('views', 'Просмотры', this.kpiA.views, this.kpiB.views, 'number'),
       this.buildCompareMetric('likes', 'Лайки', this.kpiA.likes, this.kpiB.likes, 'number'),
       this.buildCompareMetric('comments', 'Комментарии', this.kpiA.comments, this.kpiB.comments, 'number'),
       this.buildCompareMetric('engagement', 'Вовлечённость', this.kpiA.engagement, this.kpiB.engagement, 'percent'),
-      this.buildCompareMetric('avgViews', 'Средний просмотр / эпизод', this.kpiA.avgViews, this.kpiB.avgViews, 'number'),
-      this.buildCompareMetric('episodes', 'Эпизоды', this.kpiA.episodes, this.kpiB.episodes, 'number'),
     ];
+
+    if (this.youtubeCompareKind === 'periods') {
+      rows.push(
+        this.buildCompareMetric('avgViews', 'Просмотры в среднем / день', this.kpiA.avgViews, this.kpiB.avgViews, 'number'),
+        this.buildCompareMetric('episodes', 'Дней с данными', this.kpiA.episodes, this.kpiB.episodes, 'number')
+      );
+    }
+
+    return rows;
+  }
+
+  get youtubeSelectedEpisodeA() {
+    return this.findEpisodeByKey(this.youtubeEpisodeOptionsA, this.youtubeEpisodeAKey);
+  }
+
+  get youtubeSelectedEpisodeB() {
+    return this.findEpisodeByKey(this.youtubeEpisodeOptionsB, this.youtubeEpisodeBKey);
+  }
+
+  get youtubeComparePrimaryLabel() {
+    return this.youtubeCompareKind === 'episodes'
+      ? this.episodeTitle(this.youtubeSelectedEpisodeA)
+      : this.getProjectNameById(this.projectAId);
+  }
+
+  get youtubeCompareSecondaryLabel() {
+    return this.youtubeCompareKind === 'episodes'
+      ? this.episodeTitle(this.youtubeSelectedEpisodeB)
+      : this.getProjectNameById(this.projectBId);
+  }
+
+  get youtubeCompareContextA() {
+    if (this.youtubeCompareKind === 'episodes') {
+      return `${this.getProjectNameById(this.projectAId)} · ${this.formatDisplayDate(this.pickEpisodeDate(this.youtubeSelectedEpisodeA))}`;
+    }
+
+    return `${this.formatDisplayDate(this.youtubeCompareAFrom)} – ${this.formatDisplayDate(this.youtubeCompareATo)}`;
+  }
+
+  get youtubeCompareContextB() {
+    if (this.youtubeCompareKind === 'episodes') {
+      return `${this.getProjectNameById(this.projectBId)} · ${this.formatDisplayDate(this.pickEpisodeDate(this.youtubeSelectedEpisodeB))}`;
+    }
+
+    return `${this.formatDisplayDate(this.youtubeCompareBFrom)} – ${this.formatDisplayDate(this.youtubeCompareBTo)}`;
   }
 
   get yandexCompareRows(): CompareMetricRow[] {
@@ -655,24 +880,46 @@ export class StatsPageComponent implements OnInit {
   }
 
   get youtubeCompareLabels(): string[] {
-    const labels = this.youtubeDateLabels(this.episodesA, this.episodesB);
-    return labels.length ? labels : this.buildIndexedLabels(Math.max(this.episodesA.length, this.episodesB.length));
+    if (this.youtubeCompareKind === 'episodes') return ['Ролик'];
+
+    const length = Math.max(this.youtubePeriodDailyA.length, this.youtubePeriodDailyB.length);
+    return Array.from({ length }, (_, index) => `День ${index + 1}`);
+  }
+
+  get youtubeCompareDateLabelsA() {
+    return this.youtubePeriodDailyA.map((row) => this.formatDisplayDate(row.metric_date));
+  }
+
+  get youtubeCompareDateLabelsB() {
+    return this.youtubePeriodDailyB.map((row) => this.formatDisplayDate(row.metric_date));
+  }
+
+  get youtubePeriodDailyA() {
+    return this.aggregateYoutubePeriodByDate(this.youtubePeriodA?.items ?? []);
+  }
+
+  get youtubePeriodDailyB() {
+    return this.aggregateYoutubePeriodByDate(this.youtubePeriodB?.items ?? []);
   }
 
   get youtubeViewSeriesA(): Array<number | null> {
-    return this.youtubeSeriesForLabels(this.episodesA, (episode) => Number(episode.youtube_views) || 0);
+    if (this.youtubeCompareKind === 'episodes') return [this.kpiA.views];
+    return this.padYoutubePeriodSeries(this.youtubePeriodDailyA.map((row) => row.views));
   }
 
   get youtubeViewSeriesB(): Array<number | null> {
-    return this.youtubeSeriesForLabels(this.episodesB, (episode) => Number(episode.youtube_views) || 0);
+    if (this.youtubeCompareKind === 'episodes') return [this.kpiB.views];
+    return this.padYoutubePeriodSeries(this.youtubePeriodDailyB.map((row) => row.views));
   }
 
   get youtubeEngagementSeriesA(): Array<number | null> {
-    return this.youtubeEngagementSeriesForLabels(this.episodesA);
+    if (this.youtubeCompareKind === 'episodes') return [this.kpiA.engagement];
+    return this.padYoutubePeriodSeries(this.youtubePeriodDailyA.map((row) => this.youtubeMetricEngagement(row)));
   }
 
   get youtubeEngagementSeriesB(): Array<number | null> {
-    return this.youtubeEngagementSeriesForLabels(this.episodesB);
+    if (this.youtubeCompareKind === 'episodes') return [this.kpiB.engagement];
+    return this.padYoutubePeriodSeries(this.youtubePeriodDailyB.map((row) => this.youtubeMetricEngagement(row)));
   }
 
   get yandexCompareLabels(): string[] {
@@ -719,7 +966,12 @@ export class StatsPageComponent implements OnInit {
 
   getSelectionHint() {
     if (this.activeSource === 'youtube') {
-      return this.mode === 'compare' ? 'Сравнение двух проектов.' : 'Выбор по проекту.';
+      if (this.mode === 'compare') {
+        return this.youtubeCompareKind === 'periods'
+          ? 'Сравнение проектов за независимые периоды.'
+          : 'Сравнение конкретных роликов.';
+      }
+      return 'Выбор по проекту.';
     }
     return this.mode === 'compare' ? 'Сравнение двух проектов за период.' : 'Выбор проекта и периода.';
   }
@@ -727,7 +979,12 @@ export class StatsPageComponent implements OnInit {
   getLoadingMessage() {
     if (this.loadingProjects) return 'Загружаем список проектов.';
     if (this.activeSource === 'youtube') {
-      return this.mode === 'compare' ? 'Загружаем два проекта.' : 'Загружаем проект.';
+      if (this.mode === 'compare') {
+        return this.youtubeCompareKind === 'periods'
+          ? 'Считаем показатели двух периодов.'
+          : 'Загружаем данные выбранных роликов.';
+      }
+      return 'Загружаем проект.';
     }
     if (this.activeSource === 'yandex') {
       return this.mode === 'compare' ? 'Обновляем два проекта по Яндексу.' : 'Обновляем Яндекс по проекту.';
@@ -765,7 +1022,7 @@ export class StatsPageComponent implements OnInit {
 
   getComparePrimaryLabel() {
     if (this.activeSource === 'youtube') {
-      return this.getProjectNameById(this.projectAId);
+      return this.youtubeComparePrimaryLabel;
     }
 
     if (this.activeSource === 'yandex') {
@@ -777,7 +1034,7 @@ export class StatsPageComponent implements OnInit {
 
   getCompareSecondaryLabel() {
     if (this.activeSource === 'youtube') {
-      return this.getProjectNameById(this.projectBId);
+      return this.youtubeCompareSecondaryLabel;
     }
 
     if (this.activeSource === 'yandex') {
@@ -857,6 +1114,10 @@ export class StatsPageComponent implements OnInit {
     this.dateTo = `${yyyy}-${mm}-${dd}`;
     this.appliedDateFrom = this.dateFrom;
     this.appliedDateTo = this.dateTo;
+    this.youtubeCompareAFrom = this.dateFrom;
+    this.youtubeCompareATo = this.dateTo;
+    this.youtubeCompareBFrom = this.dateFrom;
+    this.youtubeCompareBTo = this.dateTo;
   }
 
   private ensureProjectStatsCompareDefaults() {
@@ -967,6 +1228,130 @@ export class StatsPageComponent implements OnInit {
     return this.instagramAccounts.find((account) => account.id === id) ?? null;
   }
 
+  private validateYoutubeComparePeriods() {
+    if (
+      !this.youtubeCompareAFrom ||
+      !this.youtubeCompareATo ||
+      !this.youtubeCompareBFrom ||
+      !this.youtubeCompareBTo
+    ) {
+      this.error = 'Укажите начало и конец периода для обеих сторон.';
+      return false;
+    }
+
+    if (this.youtubeCompareAFrom > this.youtubeCompareATo) {
+      this.error = 'В периоде A дата начала позже даты окончания.';
+      return false;
+    }
+
+    if (this.youtubeCompareBFrom > this.youtubeCompareBTo) {
+      this.error = 'В периоде B дата начала позже даты окончания.';
+      return false;
+    }
+
+    return true;
+  }
+
+  private toEpisodeChoice(episode: EpisodeInfo) {
+    const date = this.pickEpisodeDate(episode);
+    const details = [episode.season ? `сезон ${episode.season}` : '', date ? this.formatDisplayDate(date) : '']
+      .filter(Boolean)
+      .join(' · ');
+
+    return {
+      value: this.episodeCompareKey(episode),
+      label: details ? `${this.episodeTitle(episode)} — ${details}` : this.episodeTitle(episode),
+    };
+  }
+
+  private episodeCompareKey(episode: EpisodeInfo) {
+    if (episode.youtube_id) return `youtube:${episode.youtube_id}`;
+    if (episode.id != null) return `id:${episode.id}`;
+    return `episode:${episode.episode_name ?? ''}:${this.pickEpisodeDate(episode)}`;
+  }
+
+  private findEpisodeByKey(episodes: EpisodeInfo[], key: string) {
+    return episodes.find((episode) => this.episodeCompareKey(episode) === key) ?? null;
+  }
+
+  private ensureEpisodeKey(episodes: EpisodeInfo[], currentKey: string) {
+    if (currentKey && this.findEpisodeByKey(episodes, currentKey)) return currentKey;
+    return episodes.length ? this.episodeCompareKey(episodes[0]) : '';
+  }
+
+  private sortEpisodeOptions(episodes: EpisodeInfo[]) {
+    return [...episodes].sort((a, b) => this.pickEpisodeDate(b).localeCompare(this.pickEpisodeDate(a)));
+  }
+
+  private episodeTitle(episode: EpisodeInfo | null) {
+    return episode?.episode_name || episode?.youtube_id || 'Ролик не выбран';
+  }
+
+  private formatDisplayDate(value: string) {
+    if (!value) return 'дата не указана';
+    const [year, month, day] = value.slice(0, 10).split('-');
+    return year && month && day ? `${day}.${month}.${year}` : value;
+  }
+
+  private aggregateYoutubePeriodByDate(items: YoutubeReleaseMetric[]): YoutubeReleaseMetric[] {
+    const rows = new Map<string, YoutubeReleaseMetric>();
+
+    for (const item of items) {
+      const date = item.metric_date.slice(0, 10);
+      if (!date) continue;
+
+      const current = rows.get(date) ?? {
+        project_name: item.project_name,
+        episode_name: '',
+        youtube_id: '',
+        channel_name: item.channel_name,
+        metric_date: date,
+        views: 0,
+        likes: 0,
+        comments: 0,
+        subscribers_gained: 0,
+        subscribers_lost: 0,
+        subscribers_net: 0,
+      };
+
+      current.views += item.views;
+      current.likes += item.likes;
+      current.comments += item.comments;
+      current.subscribers_gained += item.subscribers_gained;
+      current.subscribers_lost += item.subscribers_lost;
+      current.subscribers_net += item.subscribers_net;
+      rows.set(date, current);
+    }
+
+    return [...rows.values()].sort((a, b) => a.metric_date.localeCompare(b.metric_date));
+  }
+
+  private computeYoutubePeriodKpi(items: YoutubeReleaseMetric[]) {
+    const daily = this.aggregateYoutubePeriodByDate(items);
+    const views = daily.reduce((sum, row) => sum + row.views, 0);
+    const likes = daily.reduce((sum, row) => sum + row.likes, 0);
+    const comments = daily.reduce((sum, row) => sum + row.comments, 0);
+    const engagement = views ? ((likes + comments) / views) * 100 : 0;
+
+    return {
+      views,
+      likes,
+      comments,
+      avgViews: daily.length ? Math.round(views / daily.length) : 0,
+      engagement,
+      episodes: daily.length,
+    };
+  }
+
+  private youtubeMetricEngagement(row: YoutubeReleaseMetric) {
+    return row.views ? ((row.likes + row.comments) / row.views) * 100 : 0;
+  }
+
+  private padYoutubePeriodSeries(values: number[]): Array<number | null> {
+    const length = Math.max(this.youtubePeriodDailyA.length, this.youtubePeriodDailyB.length);
+    return Array.from({ length }, (_, index) => values[index] ?? null);
+  }
+
   private filterByPeriod(episodes: EpisodeInfo[]): EpisodeInfo[] {
     const from = this.appliedDateFrom;
     const to = this.appliedDateTo;
@@ -980,8 +1365,7 @@ export class StatsPageComponent implements OnInit {
       return true;
     });
 
-    // Если за период нет видео — показываем все (чтобы проект не был пустым)
-    return filtered.length > 0 ? filtered : episodes;
+    return filtered;
   }
 
   private computeKpi(episodes: EpisodeInfo[]) {
@@ -1022,52 +1406,8 @@ export class StatsPageComponent implements OnInit {
     return [...episodes].sort((a, b) => this.pickEpisodeDate(a).localeCompare(this.pickEpisodeDate(b)));
   }
 
-  private pickEpisodeDate(episode: EpisodeInfo) {
-    return (episode.youtube_release_date || episode.release_date || '').slice(0, 10);
-  }
-
-  private youtubeDateLabels(...episodeGroups: EpisodeInfo[][]): string[] {
-    const labels = new Set<string>();
-
-    episodeGroups
-      .flat()
-      .forEach((episode) => {
-        const date = this.pickEpisodeDate(episode);
-        if (date) labels.add(date);
-      });
-
-    return [...labels].sort((a, b) => a.localeCompare(b));
-  }
-
-  private youtubeSeriesForLabels(
-    episodes: EpisodeInfo[],
-    selector: (episode: EpisodeInfo) => number
-  ): Array<number | null> {
-    return this.youtubeCompareLabels.map((label) => {
-      const value = episodes
-        .filter((episode) => this.pickEpisodeDate(episode) === label)
-        .reduce((sum, episode) => sum + selector(episode), 0);
-
-      return value || 0;
-    });
-  }
-
-  private youtubeEngagementSeriesForLabels(episodes: EpisodeInfo[]): Array<number | null> {
-    return this.youtubeCompareLabels.map((label) => {
-      const rows = episodes.filter((episode) => this.pickEpisodeDate(episode) === label);
-      const views = rows.reduce((sum, episode) => sum + (Number(episode.youtube_views) || 0), 0);
-      const likes = rows.reduce((sum, episode) => sum + (Number(episode.youtube_likes) || 0), 0);
-      const comments = rows.reduce((sum, episode) => sum + (Number(episode.youtube_comments) || 0), 0);
-
-      return views ? ((likes + comments) / views) * 100 : 0;
-    });
-  }
-
-  private episodeEngagement(episode: EpisodeInfo) {
-    const views = Number(episode.youtube_views) || 0;
-    const likes = Number(episode.youtube_likes) || 0;
-    const comments = Number(episode.youtube_comments) || 0;
-    return views ? ((likes + comments) / views) * 100 : 0;
+  private pickEpisodeDate(episode: EpisodeInfo | null) {
+    return (episode?.youtube_release_date || episode?.release_date || '').slice(0, 10);
   }
 
   private instagramPerPostSeries(account: InstagramAccount | null): Array<number | null> {

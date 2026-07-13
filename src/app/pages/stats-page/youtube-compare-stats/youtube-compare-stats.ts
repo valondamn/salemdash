@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
-import { NgFor } from '@angular/common';
+import { NgFor, NgIf } from '@angular/common';
 
 import { ComparisonLineChartComponent } from '../../../shared/ui/comparison-line-chart/comparison-line-chart';
 import { CompareMetricRow } from '../stats.models';
@@ -7,7 +7,7 @@ import { CompareMetricRow } from '../stats.models';
 @Component({
   selector: 'app-youtube-compare-stats',
   standalone: true,
-  imports: [NgFor, ComparisonLineChartComponent],
+  imports: [NgFor, NgIf, ComparisonLineChartComponent],
   templateUrl: './youtube-compare-stats.html',
   styleUrl: './youtube-compare-stats.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -19,8 +19,13 @@ export class YoutubeCompareStatsComponent {
   @Input({ required: true }) viewSeriesB: Array<number | null> = [];
   @Input({ required: true }) engagementSeriesA: Array<number | null> = [];
   @Input({ required: true }) engagementSeriesB: Array<number | null> = [];
+  @Input() dateLabelsA: string[] = [];
+  @Input() dateLabelsB: string[] = [];
+  @Input() kind: 'periods' | 'episodes' = 'periods';
   @Input({ required: true }) primaryLabel = '';
   @Input({ required: true }) secondaryLabel = '';
+  @Input() contextA = '';
+  @Input() contextB = '';
   @Input({ required: true }) summary = '';
 
   trackByMetric = (_: number, row: CompareMetricRow) => row.key;

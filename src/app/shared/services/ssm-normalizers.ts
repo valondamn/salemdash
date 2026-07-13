@@ -125,7 +125,7 @@ function normalizeProjectInfoItem(item: ProjectInfoApiItem): EpisodeInfo {
 
 export function normalizeProjectInfo(resp: EpisodeInfo[] | ProjectInfoApiResponse): EpisodeInfo[] {
   if (Array.isArray(resp)) {
-    return resp;
+    return resp.map((item) => normalizeProjectInfoItem(item as ProjectInfoApiItem));
   }
 
   const items = Array.isArray(resp?.items) ? resp.items : [];

@@ -15,6 +15,8 @@ export class ComparisonLineChartComponent implements AfterViewInit, OnChanges {
   @Input() seriesB: Array<number | null> = [];
   @Input() nameA = 'Проект A';
   @Input() nameB = 'Проект B';
+  @Input() tooltipLabelsA: string[] = [];
+  @Input() tooltipLabelsB: string[] = [];
   @Input() format: ValueFormat = 'number';
 
   @ViewChild('chartEl', { static: true }) chartEl!: ElementRef<HTMLDivElement>;
@@ -26,7 +28,15 @@ export class ComparisonLineChartComponent implements AfterViewInit, OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['labels'] || changes['seriesA'] || changes['seriesB'] || changes['nameA'] || changes['nameB']) {
+    if (
+      changes['labels'] ||
+      changes['seriesA'] ||
+      changes['seriesB'] ||
+      changes['nameA'] ||
+      changes['nameB'] ||
+      changes['tooltipLabelsA'] ||
+      changes['tooltipLabelsB']
+    ) {
       this.render();
     }
   }
@@ -89,16 +99,18 @@ export class ComparisonLineChartComponent implements AfterViewInit, OnChanges {
           const label = this.labels[index] ?? `#${index + 1}`;
           const valueA = this.seriesA[index];
           const valueB = this.seriesB[index];
+          const dateA = this.tooltipLabelsA[index];
+          const dateB = this.tooltipLabelsB[index];
 
           return `
             <div style="min-width:220px">
               <div style="font-weight:800;margin-bottom:8px">${label}</div>
               <div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:4px">
-                <span style="color:${colorA}">${this.nameA}</span>
+                <span style="color:${colorA}">${this.nameA}${dateA ? ` · ${dateA}` : ''}</span>
                 <b>${this.formatValue(valueA)}</b>
               </div>
               <div style="display:flex;justify-content:space-between;gap:12px">
-                <span style="color:${colorB}">${this.nameB}</span>
+                <span style="color:${colorB}">${this.nameB}${dateB ? ` · ${dateB}` : ''}</span>
                 <b>${this.formatValue(valueB)}</b>
               </div>
             </div>

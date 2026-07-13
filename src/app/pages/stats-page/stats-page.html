@@ -22,10 +22,17 @@
   <section class="control-card card">
     <div class="control-head">
       <div>
-        <div class="section-title">{{ mode === 'compare' ? 'Сравнение' : 'Данные' }}</div>
+        <div class="section-title">
+          {{ activeSource === 'youtube' && mode === 'compare' ? 'Конструктор сравнения' : (mode === 'compare' ? 'Сравнение' : 'Данные') }}
+        </div>
       </div>
 
-      <button class="btn accent-btn" (click)="onRefresh()" [disabled]="currentLoading || loadingProjects">
+      <button
+        class="btn accent-btn"
+        *ngIf="!(activeSource === 'youtube' && mode === 'compare')"
+        (click)="onRefresh()"
+        [disabled]="currentLoading || loadingProjects"
+      >
         {{ currentLoading || loadingProjects ? 'Обновляем...' : 'Обновить данные' }}
       </button>
     </div>
@@ -59,44 +66,155 @@
       </div>
     </div>
 
-    <div class="control-grid compare-grid" *ngIf="activeSource === 'youtube' && mode === 'compare'">
-      <label class="control-item">
-        <span class="control-label">Проект A</span>
-        <select class="select compact-select accent-a" [(ngModel)]="projectAId" (change)="onCompareProjectsChange()">
-          <option value="" disabled>{{ loadingProjects ? 'Загружаем проекты...' : 'Проект A...' }}</option>
-          <option *ngFor="let p of projects" [value]="p.id">
-            {{ p.name || p.utm_name || ('Проект ' + p.id) }}
-          </option>
-        </select>
-      </label>
+    <section class="youtube-compare-builder" *ngIf="activeSource === 'youtube' && mode === 'compare'">
+      <div class="compare-builder-toolbar">
+        <div class="compare-kind-switch" role="group" aria-label="Тип сравнения">
+          <button
+            type="button"
+            class="compare-kind-button"
+            [class.active]="youtubeCompareKind === 'periods'"
+            (click)="setYoutubeCompareKind('periods')"
+          >
+            <span>Периоды</span>
+            <small>динамика проекта</small>
+          </button>
+          <button
+            type="button"
+            class="compare-kind-button"
+            [class.active]="youtubeCompareKind === 'episodes'"
+            (click)="setYoutubeCompareKind('episodes')"
+          >
+            <span>Ролики</span>
+            <small>конкретные серии</small>
+          </button>
+        </div>
 
-      <label class="control-item">
-        <span class="control-label">Проект B</span>
-        <select class="select compact-select accent-b" [(ngModel)]="projectBId" (change)="onCompareProjectsChange()">
-          <option value="" disabled>{{ loadingProjects ? 'Загружаем проекты...' : 'Проект B...' }}</option>
-          <option *ngFor="let p of projects" [value]="p.id">
-            {{ p.name || p.utm_name || ('Проект ' + p.id) }}
-          </option>
-        </select>
-      </label>
+        <div class="compare-builder-actions">
+          <button class="btn builder-utility" type="button" (click)="copyYoutubeProjectAToB()" [disabled]="!projectAId">
+            Тот же проект
+          </button>
+          <button class="btn builder-utility" type="button" (click)="swapYoutubeCompareSides()" [disabled]="!projectAId || !projectBId">
+            Поменять A ↔ B
+          </button>
+        </div>
+      </div>
 
-      <label class="control-item">
-        <span class="control-label">С</span>
-        <input class="select compact-select" type="date" [(ngModel)]="dateFrom" />
-      </label>
+      <div class="compare-side-grid">
+        <article class="compare-side-card compare-side-a">
+          <div class="compare-side-head">
+            <span class="compare-side-index">A</span>
+            <div>
+              <strong>Первая сторона</strong>
+              <span>{{ youtubeCompareKind === 'periods' ? 'проект и период' : 'проект и ролик' }}</span>
+            </div>
+          </div>
 
-      <label class="control-item">
-        <span class="control-label">По</span>
-        <input class="select compact-select" type="date" [(ngModel)]="dateTo" />
-      </label>
+          <label class="control-item">
+            <span class="control-label">Проект</span>
+            <select class="select compact-select accent-a" [(ngModel)]="projectAId" (change)="onCompareProjectsChange()">
+              <option value="" disabled>{{ loadingProjects ? 'Загружаем проекты...' : 'Выберите проект...' }}</option>
+              <option *ngFor="let p of projects" [value]="p.id">
+                {{ p.name || p.utm_name || ('Проект ' + p.id) }}
+              </option>
+            </select>
+          </label>
 
-      <div class="control-item">
-        <span class="control-label">Период</span>
-        <button class="btn accent-btn" type="button" (click)="applyPeriod()" [disabled]="currentLoading || loadingProjects">
-          Применить
+          <div class="compare-date-row" *ngIf="youtubeCompareKind === 'periods'">
+            <label class="control-item">
+              <span class="control-label">Начало</span>
+              <input class="select compact-select" type="date" [(ngModel)]="youtubeCompareAFrom" (ngModelChange)="invalidateYoutubeComparison()" />
+            </label>
+            <label class="control-item">
+              <span class="control-label">Конец</span>
+              <input class="select compact-select" type="date" [(ngModel)]="youtubeCompareATo" (ngModelChange)="invalidateYoutubeComparison()" />
+            </label>
+          </div>
+
+          <label class="control-item" *ngIf="youtubeCompareKind === 'episodes'">
+            <span class="control-label">Ролик</span>
+            <ng-select
+              class="episode-select episode-select-a"
+              [items]="youtubeEpisodeChoicesA"
+              bindLabel="label"
+              bindValue="value"
+              [(ngModel)]="youtubeEpisodeAKey"
+              (ngModelChange)="invalidateYoutubeComparison()"
+              [loading]="loadingYoutubeEpisodesA"
+              [clearable]="false"
+              [searchable]="true"
+              placeholder="Найдите серию по названию"
+              notFoundText="Серии не найдены"
+              loadingText="Загружаем серии..."
+            ></ng-select>
+          </label>
+        </article>
+
+        <article class="compare-side-card compare-side-b">
+          <div class="compare-side-head">
+            <span class="compare-side-index">B</span>
+            <div>
+              <strong>Вторая сторона</strong>
+              <span>{{ youtubeCompareKind === 'periods' ? 'можно выбрать тот же проект' : 'можно выбрать другой проект' }}</span>
+            </div>
+          </div>
+
+          <label class="control-item">
+            <span class="control-label">Проект</span>
+            <select class="select compact-select accent-b" [(ngModel)]="projectBId" (change)="onCompareProjectsChange()">
+              <option value="" disabled>{{ loadingProjects ? 'Загружаем проекты...' : 'Выберите проект...' }}</option>
+              <option *ngFor="let p of projects" [value]="p.id">
+                {{ p.name || p.utm_name || ('Проект ' + p.id) }}
+              </option>
+            </select>
+          </label>
+
+          <div class="compare-date-row" *ngIf="youtubeCompareKind === 'periods'">
+            <label class="control-item">
+              <span class="control-label">Начало</span>
+              <input class="select compact-select" type="date" [(ngModel)]="youtubeCompareBFrom" (ngModelChange)="invalidateYoutubeComparison()" />
+            </label>
+            <label class="control-item">
+              <span class="control-label">Конец</span>
+              <input class="select compact-select" type="date" [(ngModel)]="youtubeCompareBTo" (ngModelChange)="invalidateYoutubeComparison()" />
+            </label>
+          </div>
+
+          <label class="control-item" *ngIf="youtubeCompareKind === 'episodes'">
+            <span class="control-label">Ролик</span>
+            <ng-select
+              class="episode-select episode-select-b"
+              [items]="youtubeEpisodeChoicesB"
+              bindLabel="label"
+              bindValue="value"
+              [(ngModel)]="youtubeEpisodeBKey"
+              (ngModelChange)="invalidateYoutubeComparison()"
+              [loading]="loadingYoutubeEpisodesB"
+              [clearable]="false"
+              [searchable]="true"
+              placeholder="Найдите серию по названию"
+              notFoundText="Серии не найдены"
+              loadingText="Загружаем серии..."
+            ></ng-select>
+          </label>
+        </article>
+      </div>
+
+      <div class="compare-builder-footer">
+        <p>
+          {{ youtubeCompareKind === 'periods'
+            ? 'Графики сопоставят периоды по порядковому дню, даже если даты и длительность отличаются.'
+            : 'Для роликов сравниваются накопленные просмотры, лайки и комментарии на текущий момент.' }}
+        </p>
+        <button
+          class="btn compare-run-button"
+          type="button"
+          (click)="runYoutubeComparison()"
+          [disabled]="!youtubeCompareCanRun"
+        >
+          {{ loadingInfo ? 'Сравниваем...' : 'Сравнить' }}
         </button>
       </div>
-    </div>
+    </section>
 
     <div class="control-grid" *ngIf="activeSource === 'yandex' && mode === 'single'">
       <label class="control-item">
@@ -263,7 +381,6 @@
       !loadingTiktok &&
       (
         (activeSource === 'youtube' && mode === 'single' && !hasYoutubeSingleData) ||
-        (activeSource === 'youtube' && mode === 'compare' && !hasYoutubeCompareData) ||
         (activeSource === 'yandex' && !hasYandexData) ||
         (activeSource === 'instagram' && !hasInstagramData) ||
         (activeSource === 'tiktok' && mode === 'single' && !hasTikTokData) ||
@@ -290,9 +407,14 @@
     [viewSeriesB]="youtubeViewSeriesB"
     [engagementSeriesA]="youtubeEngagementSeriesA"
     [engagementSeriesB]="youtubeEngagementSeriesB"
-    [primaryLabel]="getComparePrimaryLabel()"
-    [secondaryLabel]="getCompareSecondaryLabel()"
-    [summary]="getCompareSummary(youtubeCompareRows, getComparePrimaryLabel(), getCompareSecondaryLabel())"
+    [dateLabelsA]="youtubeCompareDateLabelsA"
+    [dateLabelsB]="youtubeCompareDateLabelsB"
+    [kind]="youtubeCompareKind"
+    [primaryLabel]="youtubeComparePrimaryLabel"
+    [secondaryLabel]="youtubeCompareSecondaryLabel"
+    [contextA]="youtubeCompareContextA"
+    [contextB]="youtubeCompareContextB"
+    [summary]="getCompareSummary(youtubeCompareRows, youtubeComparePrimaryLabel, youtubeCompareSecondaryLabel)"
   ></app-youtube-compare-stats>
 
   <section class="main-content project-platform-content" *ngIf="isProjectPlatformSource && mode === 'single' && projectStats as stats">

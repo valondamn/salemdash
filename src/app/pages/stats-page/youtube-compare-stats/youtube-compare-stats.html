@@ -1,18 +1,18 @@
 <div class="main-content">
   <section class="compare-hero card">
-    <div>
+    <div class="compare-hero-copy">
       <span class="eyebrow">{{ kind === 'periods' ? 'Сравнение периодов' : 'Сравнение роликов' }}</span>
-      <h2>{{ primaryLabel }} против {{ secondaryLabel }}</h2>
-      <p class="muted">{{ summary }}</p>
+      <h2>{{ kind === 'periods' ? primaryLabel + ' против ' + secondaryLabel : 'Результат сравнения роликов' }}</h2>
+      <p class="muted">{{ displaySummary }}</p>
     </div>
 
     <div class="duel-chips">
-      <div class="project-chip chip-a">
+      <div class="project-chip chip-a" [title]="primaryLabel + ' · ' + contextA">
         <span>A</span>
         <strong>{{ primaryLabel }}</strong>
         <small>{{ contextA }}</small>
       </div>
-      <div class="project-chip chip-b">
+      <div class="project-chip chip-b" [title]="secondaryLabel + ' · ' + contextB">
         <span>B</span>
         <strong>{{ secondaryLabel }}</strong>
         <small>{{ contextB }}</small>
@@ -96,20 +96,20 @@
     <div class="detail-table">
       <div class="detail-head">
         <div>Метрика</div>
-        <div>{{ primaryLabel }}</div>
-        <div>{{ secondaryLabel }}</div>
+        <div>Сторона A</div>
+        <div>Сторона B</div>
         <div>Разница</div>
       </div>
 
       <div class="detail-row" *ngFor="let row of rows; trackBy: trackByMetric">
         <div class="detail-metric">{{ row.label }}</div>
 
-        <div class="detail-side">
+        <div class="detail-side" data-side="A">
           <div class="detail-value">{{ formatMetricValue(row.a, row.format) }}</div>
           <div class="bar-track"><span class="bar-fill fill-a" [style.width.%]="barWidth(row.a, row.b)"></span></div>
         </div>
 
-        <div class="detail-side">
+        <div class="detail-side" data-side="B">
           <div class="detail-value">{{ formatMetricValue(row.b, row.format) }}</div>
           <div class="bar-track"><span class="bar-fill fill-b" [style.width.%]="barWidth(row.b, row.a)"></span></div>
         </div>

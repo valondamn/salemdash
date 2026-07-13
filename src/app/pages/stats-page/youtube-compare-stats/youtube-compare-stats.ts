@@ -30,6 +30,18 @@ export class YoutubeCompareStatsComponent {
 
   trackByMetric = (_: number, row: CompareMetricRow) => row.key;
 
+  get displaySummary() {
+    if (this.kind === 'periods') return this.summary;
+
+    const winsA = this.rows.filter((row) => row.winner === 'a').length;
+    const winsB = this.rows.filter((row) => row.winner === 'b').length;
+
+    if (winsA === winsB) return 'По ключевым метрикам результат почти равный.';
+
+    const leader = winsA > winsB ? 'A' : 'B';
+    return `Сторона ${leader} лидирует в ${Math.max(winsA, winsB)} из ${this.rows.length} ключевых метрик.`;
+  }
+
   formatMetricValue(value: number, format: CompareMetricRow['format'], compact = false) {
     if (format === 'percent') {
       return `${Intl.NumberFormat('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)}%`;

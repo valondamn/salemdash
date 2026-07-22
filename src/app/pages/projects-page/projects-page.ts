@@ -8,6 +8,7 @@ import { ToastrService } from 'ngx-toastr';
 
 import { Project, ProjectAccountOption, ProjectUpsertPayload } from '../../shared/services/ssm-models';
 import { ProjectsApiService } from '../../shared/services/projects-api.service';
+import { resolveApiErrorMessage } from '../../shared/utils/http-error';
 
 type ProjectForm = FormGroup<{
   name: FormControl<string>;
@@ -140,7 +141,11 @@ export class ProjectsPageComponent implements OnInit {
     this.error.set(null);
 
     forkJoin({
-      projects: this.projectsApi.getProjects(force).pipe(catchError(() => of<any[]>([]))),
+      // Projects are the core data this page shows — let a failure here
+      // surface through the error banner. The account lists below are just
+      // used to resolve display names, so those degrade gracefully instead
+      // of blocking the whole page.
+      projects: this.projectsApi.getProjects(force),
       youtubeChannels: this.projectsApi.getYoutubeChannelList(force).pipe(catchError(() => of<any[]>([]))),
       instagramAccounts: this.projectsApi.getInstagramAccountList(force).pipe(catchError(() => of<any[]>([]))),
       tiktokAccounts: this.projectsApi.getTikTokAccountList(force).pipe(catchError(() => of<any[]>([]))),
@@ -157,7 +162,7 @@ export class ProjectsPageComponent implements OnInit {
           this.tiktokAccounts.set(tiktokAccounts ?? []);
         },
         error: (e: any) => {
-          this.error.set(e?.message ?? 'Не удалось загрузить проекты');
+          this.error.set(resolveApiErrorMessage(e, 'Не удалось загрузить проекты'));
         },
       });
   }
@@ -232,7 +237,7 @@ export class ProjectsPageComponent implements OnInit {
           this.closeEditor();
         },
         error: (e: any) => {
-          const msg = e?.message ?? 'Не удалось сохранить проект';
+          const msg = resolveApiErrorMessage(e, 'Не удалось сохранить проект');
           this.error.set(msg);
           this.toastr.error(msg, 'Ошибка');
         },

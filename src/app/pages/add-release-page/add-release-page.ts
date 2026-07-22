@@ -19,6 +19,7 @@ import {
 } from '../../shared/services/ssm-models';
 import { ProjectsApiService } from '../../shared/services/projects-api.service';
 import { ReleasesApiService } from '../../shared/services/releases-api.service';
+import { resolveApiErrorMessage } from '../../shared/utils/http-error';
 
 type AddReleaseForm = FormGroup<{
   project_id: FormControl<string>;
@@ -130,7 +131,7 @@ export class AddReleasePageComponent implements OnInit {
         }
       },
       error: (e: any) => {
-        this.error.set(e?.message ?? 'Не удалось загрузить проекты');
+        this.error.set(resolveApiErrorMessage(e, 'Не удалось загрузить проекты'));
       },
       complete: () => {
         this.loadingProjects.set(false);
@@ -206,7 +207,7 @@ export class AddReleasePageComponent implements OnInit {
         this.form.markAsUntouched();
       },
       error: (e: any) => {
-        const msg = e?.message || 'Не удалось сохранить релиз';
+        const msg = resolveApiErrorMessage(e, 'Не удалось сохранить релиз');
         this.error.set(msg);
         this.toastr.error(msg, 'Ошибка');
       },
@@ -263,7 +264,7 @@ export class AddReleasePageComponent implements OnInit {
         this.videos.set([...(rows ?? [])].sort((a, b) => this.getVideoDate(b).localeCompare(this.getVideoDate(a))));
       },
       error: (e: any) => {
-        this.error.set(e?.message ?? 'Не удалось загрузить общий список видео');
+        this.error.set(resolveApiErrorMessage(e, 'Не удалось загрузить общий список видео'));
       },
       complete: () => {
         this.loadingVideos.set(false);

@@ -8,6 +8,7 @@ import { ThemeService } from '../../shared/services/theme';
 import { AuthService } from '../../shared/services/auth';
 import { AddUserPayload, RoleOption, SystemUser } from '../../shared/services/ssm-models';
 import { extractCreatedUserId, SsmApiService } from '../../shared/services/ssm-api.service';
+import { resolveApiErrorMessage } from '../../shared/utils/http-error';
 
 @Component({
   selector: 'app-settings-page',
@@ -140,25 +141,6 @@ export class SettingsPageComponent implements OnInit {
   }
 
   private resolveApiError(error: unknown, fallback: string) {
-    const status = (error as { status?: number })?.status;
-    const message = (error as { error?: { message?: string; detail?: string } })?.error?.message
-      ?? (error as { error?: { message?: string; detail?: string } })?.error?.detail;
-
-    if (typeof message === 'string' && message.trim()) {
-      return message;
-    }
-
-    switch (status) {
-      case 401:
-        return 'Сессия истекла. Войдите заново.';
-      case 403:
-        return 'Недостаточно прав для выполнения действия.';
-      case 404:
-        return 'Объект не найден.';
-      case 409:
-        return 'Конфликт данных. Проверьте логин пользователя.';
-      default:
-        return fallback;
-    }
+    return resolveApiErrorMessage(error, fallback);
   }
 }

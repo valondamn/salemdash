@@ -1351,19 +1351,22 @@ export class StatsPageComponent implements OnInit {
   private filterByPeriod(episodes: EpisodeInfo[]): EpisodeInfo[] {
     if (!this.youtubePeriodFilterActive) return episodes;
 
-    const from = this.appliedDateFrom;
+    // Period here means "show stats for episodes that already exist as of
+    // the selected date", not "only episodes released inside the range".
+    // Otherwise older episodes that are still racking up views during the
+    // period get excluded just because they premiered before it started —
+    // which was confusing (e.g. a project with all episodes released in
+    // 2023 showed "no data" for a 2025-2026 period even though those
+    // episodes were still live and had real stats). Only the upper bound
+    // ("по") matters: an episode counts if it was already released by then.
     const to = this.appliedDateTo;
-    if (!from && !to) return episodes;
+    if (!to) return episodes;
 
-    const filtered = episodes.filter((ep) => {
+    return episodes.filter((ep) => {
       const date = (ep.youtube_release_date || ep.release_date || '').slice(0, 10);
       if (!date) return true;
-      if (from && date < from) return false;
-      if (to && date > to) return false;
-      return true;
+      return date <= to;
     });
-
-    return filtered;
   }
 
   private computeKpi(episodes: EpisodeInfo[]) {

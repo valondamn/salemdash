@@ -396,6 +396,7 @@
     *ngIf="activeSource === 'youtube' && mode === 'single' && hasYoutubeSingleData"
     [headline]="getSingleHeadline()"
     [episodes]="episodes"
+    [periodTotals]="youtubeSinglePeriodTotals"
     [loadingInfo]="loadingInfo"
   ></app-youtube-single-stats>
 

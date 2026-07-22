@@ -17,6 +17,13 @@ import { EpisodeInfo } from '../../../shared/services/ssm-models';
 export class YoutubeSingleStatsComponent implements OnChanges {
   @Input({ required: true }) headline = '';
   @Input({ required: true }) episodes: EpisodeInfo[] = [];
+  /**
+   * Real "views/likes/comments gained during the selected period", sourced from
+   * the daily releases feed. Null when no period is applied yet, or the range
+   * predates the daily-metrics retention window — in that case totals fall back
+   * to summing each episode's lifetime YouTubeViews/Likes/Comments below.
+   */
+  @Input() periodTotals: { views: number; likes: number; comments: number } | null = null;
   @Input({ required: true }) loadingInfo = false;
 
   selectedChannel = 'all';
@@ -46,16 +53,33 @@ export class YoutubeSingleStatsComponent implements OnChanges {
     return (this.episodes ?? []).filter(e => e.youtube_channel === this.selectedChannel);
   }
 
+  /**
+   * Period totals are aggregated at the whole-project level (the daily feed
+   * doesn't break metrics down by channel), so they only apply while viewing
+   * "all channels". Filtering to a single channel falls back to lifetime sums
+   * for that channel's episodes, since a per-channel period figure isn't available.
+   */
+  get usingPeriodTotals(): boolean {
+    return !!this.periodTotals && this.selectedChannel === 'all';
+  }
+
   get totalViews(): number {
+    if (this.usingPeriodTotals) return this.periodTotals!.views;
     return this.filteredEpisodes.reduce((sum, e) => sum + (Number(e.youtube_views) || 0), 0);
   }
 
   get totalLikes(): number {
+    if (this.usingPeriodTotals) return this.periodTotals!.likes;
     return this.filteredEpisodes.reduce((sum, e) => sum + (Number(e.youtube_likes) || 0), 0);
   }
 
   get totalComments(): number {
+    if (this.usingPeriodTotals) return this.periodTotals!.comments;
     return this.filteredEpisodes.reduce((sum, e) => sum + (Number(e.youtube_comments) || 0), 0);
+  }
+
+  get totalsHint(): string {
+    return this.usingPeriodTotals ? 'за выбранный период' : 'суммарно за всё время';
   }
 
   get avgViews(): number {

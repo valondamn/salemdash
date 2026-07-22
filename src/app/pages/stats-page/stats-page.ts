@@ -2,8 +2,8 @@ import { ChangeDetectorRef, Component, NgZone, OnInit, ViewEncapsulation } from 
 import { NgFor, NgIf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NgSelectComponent } from '@ng-select/ng-select';
-import { forkJoin } from 'rxjs';
-import { finalize } from 'rxjs/operators';
+import { forkJoin, of } from 'rxjs';
+import { catchError, finalize } from 'rxjs/operators';
 
 import {
   Project,
@@ -83,6 +83,16 @@ export class StatsPageComponent implements OnInit {
    * kicks in once the user explicitly applies a date range.
    */
   youtubePeriodFilterActive = false;
+
+  /**
+   * Period-scoped totals for the single-project YouTube view, sourced from the
+   * daily releases_for_project feed (real per-day deltas) instead of each
+   * episode's lifetime YouTubeViews/Likes/Comments. Null means "no period data
+   * for this range" (either no period applied yet, or the range predates the
+   * daily-metrics retention window, roughly 2026-03-14) — in that case the
+   * single-stats component falls back to lifetime per-episode totals.
+   */
+  youtubeSinglePeriodTotals: { views: number; likes: number; comments: number } | null = null;
 
   projectStatsId = 'all';
   projectStatsAId = '';
@@ -373,10 +383,22 @@ export class StatsPageComponent implements OnInit {
     this.error = null;
     this.startInfoLoadTimer('Данные проекта загружаются дольше обычного. Попробуйте обновить ещё раз.');
 
-    this.projectsApi.getProjectInfo(id, force).subscribe({
-      next: (allEpisodes) => {
+    // Only ask for period-scoped daily totals once the user has actually applied
+    // a date range — otherwise there's no meaningful "period" to scope them to.
+    const wantsPeriodTotals = this.youtubePeriodFilterActive && !!this.appliedDateFrom && !!this.appliedDateTo;
+
+    forkJoin({
+      episodes: this.projectsApi.getProjectInfo(id, force),
+      period: wantsPeriodTotals
+        ? this.analyticsApi
+            .getYoutubeProjectReleaseMetrics(id, this.appliedDateFrom, this.appliedDateTo)
+            .pipe(catchError(() => of(null)))
+        : of(null),
+    }).subscribe({
+      next: ({ episodes: allEpisodes, period }) => {
         this.clearInfoLoadTimer();
         this.episodes = this.filterByPeriod(allEpisodes);
+        this.youtubeSinglePeriodTotals = this.buildSinglePeriodTotals(period);
         this.loadingInfo = false;
         this.cdr.detectChanges();
       },
@@ -387,6 +409,13 @@ export class StatsPageComponent implements OnInit {
         this.cdr.detectChanges();
       },
     });
+  }
+
+  private buildSinglePeriodTotals(period: YoutubeReleasePeriod | null) {
+    if (!period || !period.items.length) return null;
+
+    const kpi = this.computeYoutubePeriodKpi(period.items);
+    return { views: kpi.views, likes: kpi.likes, comments: kpi.comments };
   }
 
   onCompareProjectsChange() {

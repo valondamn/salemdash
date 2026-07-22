@@ -17,6 +17,9 @@
     <span class="channel-filter-hint muted" *ngIf="selectedChannel !== 'all'">
       {{ filteredEpisodes.length }} из {{ episodes.length }} строк
     </span>
+    <span class="channel-filter-hint muted" *ngIf="selectedChannel !== 'all' && periodTotals">
+      Тоталы по периоду считаются по всем каналам проекта — для отдельного канала показаны суммарные показатели эпизодов за всё время.
+    </span>
   </div>
 
   <section class="stats-grid" *ngIf="filteredEpisodes.length">
@@ -29,19 +32,19 @@
     <div class="stat card accent-blue">
       <div class="label">Просмотры</div>
       <div class="value">{{ fmtCompact(totalViews) }}</div>
-      <div class="hint muted">суммарно</div>
+      <div class="hint muted">{{ totalsHint }}</div>
     </div>
 
     <div class="stat card accent-rose">
       <div class="label">Лайки</div>
       <div class="value">{{ fmtCompact(totalLikes) }}</div>
-      <div class="hint muted">суммарно</div>
+      <div class="hint muted">{{ totalsHint }}</div>
     </div>
 
     <div class="stat card accent-amber">
       <div class="label">Комментарии</div>
       <div class="value">{{ fmtCompact(totalComments) }}</div>
-      <div class="hint muted">суммарно</div>
+      <div class="hint muted">{{ totalsHint }}</div>
     </div>
 
     <div class="stat card accent-violet">

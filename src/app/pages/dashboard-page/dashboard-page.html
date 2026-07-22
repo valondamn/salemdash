@@ -20,7 +20,7 @@
         <button class="btn dashboard-page__period-btn" (click)="applyPeriod()" [disabled]="activeLoading">
           Применить
         </button>
-        <button class="btn dashboard-page__period-btn dashboard-page__period-btn--ghost" (click)="resetPeriod()" [disabled]="activeLoading && !periodActive">
+        <button class="btn dashboard-page__period-btn dashboard-page__period-btn--ghost" (click)="resetPeriod()" [disabled]="activeLoading || !periodActive">
           Сбросить
         </button>
         <span class="dashboard-page__period-badge" *ngIf="periodActive">{{ periodLabel }}</span>
@@ -143,7 +143,7 @@
       </div>
 
       <div class="dashboard-page__empty" *ngIf="!loadingChannels() && !channels().length">
-        Данные по YouTube-каналам пока не пришли из API.
+        {{ periodActive ? 'За выбранный период нет данных по YouTube. Дневная статистика обычно доступна за последние несколько месяцев — попробуйте более свежий период.' : 'Данные по YouTube-каналам пока не пришли из API.' }}
       </div>
 
       <div class="dashboard-page__table dashboard-page__table--channels" *ngIf="channels().length">
@@ -218,7 +218,7 @@
       </div>
 
       <div class="dashboard-page__empty" *ngIf="!loadingInstagram() && !instagramAccounts().length">
-        Данные по Instagram пока не пришли из API.
+        {{ periodActive ? 'За выбранный период нет данных по Instagram. Попробуйте другой период.' : 'Данные по Instagram пока не пришли из API.' }}
       </div>
 
       <div class="dashboard-page__table dashboard-page__table--instagram" *ngIf="instagramAccounts().length">
@@ -251,6 +251,10 @@
 
   <!-- ═══════════════════ YANDEX ═══════════════════ -->
   <div class="platform-section" *ngIf="activePlatform() === 'yandex'">
+
+    <div class="dashboard-page__notice" *ngIf="periodActive">
+      Для Яндекс Метрики фильтр по периоду пока не поддерживается — ниже данные за всё время.
+    </div>
 
     <section class="dashboard-page__stats">
       <div class="dashboard-page__stat card">
@@ -319,7 +323,7 @@
       </div>
 
       <div class="dashboard-page__empty" *ngIf="!loadingTikTok() && !tiktokAccounts().length">
-        Данные по TikTok пока не пришли из API.
+        {{ periodActive ? 'За выбранный период нет данных по TikTok. Попробуйте другой период.' : 'Данные по TikTok пока не пришли из API.' }}
       </div>
 
       <div class="dashboard-page__table dashboard-page__table--instagram" *ngIf="tiktokAccounts().length">

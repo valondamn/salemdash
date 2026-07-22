@@ -404,7 +404,7 @@ export function normalizeInstagramProjectStats(response: any, dateFrom = '', dat
     project_id: pickNumber(item.ProjectID, item.project_id, fallbackProjectId) ?? 0,
     project_name: pickString(item.ProjectName, item.project_name) ?? 'Проект',
     metric_date: normalizeMetricDate(item.metric_date, item.Metric_Date),
-    label: pickString(item.page_name, item.Page_Name, item.username, item.Instagram_Username) ?? 'Instagram',
+    label: pickString(item.page_name, item.Page_Name, item.username, item.Instagram_Username, item.ProjectName, item.project_name) ?? 'Instagram',
     url: pickString(item.username, item.Instagram_Username) ? `https://www.instagram.com/${pickString(item.username, item.Instagram_Username)}/` : '',
     primary: pickNumber(item.views_day, item.Instagram_Views_Day, item.Instagram_Views_Total, item.views_total) ?? 0,
     secondary: pickNumber(item.likes_day, item.Instagram_Likes_Day, item.Instagram_Likes_Total, item.likes_total) ?? 0,

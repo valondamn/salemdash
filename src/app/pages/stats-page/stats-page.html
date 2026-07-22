@@ -378,9 +378,9 @@
     *ngIf="
       !loadingInfo &&
       !loadingProjects &&
-      !loadingTiktok &&
       (
         (activeSource === 'youtube' && mode === 'single' && !hasYoutubeSingleData) ||
+        (activeSource === 'youtube' && mode === 'compare' && !hasYoutubeCompareData && youtubeComparisonReady) ||
         (activeSource === 'yandex' && !hasYandexData) ||
         (activeSource === 'instagram' && !hasInstagramData) ||
         (activeSource === 'tiktok' && mode === 'single' && !hasTikTokData) ||

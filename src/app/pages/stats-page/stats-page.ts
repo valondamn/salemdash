@@ -10,8 +10,6 @@ import {
   EpisodeInfo,
   InstagramAccount,
   YandexProjectAnalytics,
-  TikTokTotal,
-  TikTokAccountTotals,
   ProjectPlatformStats,
   ProjectMetricRow,
   YoutubeReleaseMetric,
@@ -77,6 +75,14 @@ export class StatsPageComponent implements OnInit {
   youtubeComparisonReady = false;
   loadingYoutubeEpisodesA = false;
   loadingYoutubeEpisodesB = false;
+  /**
+   * By default the YouTube "single project" view shows the full episode catalog.
+   * Episodes are release-dated, not daily metrics, so most series don't release
+   * anything within "this month" — filtering by the default period out of the box
+   * used to leave the view empty for almost every project. The period filter only
+   * kicks in once the user explicitly applies a date range.
+   */
+  youtubePeriodFilterActive = false;
 
   projectStatsId = 'all';
   projectStatsAId = '';
@@ -104,13 +110,6 @@ export class StatsPageComponent implements OnInit {
   instagramAId = '';
   instagramBId = '';
 
-  tiktokTotal: TikTokTotal | null = null;
-  tiktokAccounts: TikTokAccountTotals[] = [];
-  tiktokSingleId = '';
-  tiktokCompareAId = '';
-  tiktokCompareBId = '';
-  loadingTiktok = false;
-
   loadingProjects = false;
   loadingInstagram = false;
   loadingInfo = false;
@@ -133,7 +132,16 @@ export class StatsPageComponent implements OnInit {
   }
 
   get hasYoutubeCompareData() {
-    return this.youtubeComparisonReady;
+    if (!this.youtubeComparisonReady) return false;
+
+    // For period comparisons the request can succeed with zero rows on both
+    // sides (e.g. a date range with no tracked daily metrics yet). Treat that
+    // as "no data" rather than rendering an all-zero chart that looks broken.
+    if (this.youtubeCompareKind === 'periods') {
+      return this.youtubePeriodDailyA.length > 0 || this.youtubePeriodDailyB.length > 0;
+    }
+
+    return true;
   }
 
   get youtubeEpisodeChoicesA() {
@@ -208,27 +216,6 @@ export class StatsPageComponent implements OnInit {
       this.buildCompareMetric('secondary', labels.secondary, a?.totals.secondary || 0, b?.totals.secondary || 0, 'number'),
       this.buildCompareMetric('tertiary', labels.tertiary, a?.totals.tertiary || 0, b?.totals.tertiary || 0, 'number'),
       this.buildCompareMetric('quaternary', labels.quaternary, a?.totals.quaternary || 0, b?.totals.quaternary || 0, 'number'),
-    ];
-  }
-
-  get tiktokCompareAccountA(): TikTokAccountTotals | null {
-    return this.tiktokAccounts.find(a => String(a.account_id) === String(this.tiktokCompareAId)) ?? null;
-  }
-
-  get tiktokCompareAccountB(): TikTokAccountTotals | null {
-    return this.tiktokAccounts.find(a => String(a.account_id) === String(this.tiktokCompareBId)) ?? null;
-  }
-
-  get tiktokCompareRows(): CompareMetricRow[] {
-    const a = this.tiktokCompareAccountA;
-    const b = this.tiktokCompareAccountB;
-    return [
-      this.buildCompareMetric('followers', 'Подписчики', a?.followers || 0, b?.followers || 0, 'number'),
-      this.buildCompareMetric('total_views', 'Просмотры', a?.total_views || 0, b?.total_views || 0, 'number'),
-      this.buildCompareMetric('total_likes', 'Лайки', a?.total_likes || 0, b?.total_likes || 0, 'number'),
-      this.buildCompareMetric('total_shares', 'Шеры', a?.total_shares || 0, b?.total_shares || 0, 'number'),
-      this.buildCompareMetric('total_comments', 'Комментарии', a?.total_comments || 0, b?.total_comments || 0, 'number'),
-      this.buildCompareMetric('total_videos', 'Видео', a?.total_videos || 0, b?.total_videos || 0, 'number'),
     ];
   }
 
@@ -316,38 +303,6 @@ export class StatsPageComponent implements OnInit {
       else this.loadCompareProjectPlatformStats(true);
       return;
     }
-  }
-
-  loadTikTok(force = false) {
-    this.loadingTiktok = true;
-    if (this.activeSource === 'tiktok') this.error = null;
-
-    forkJoin([
-      this.analyticsApi.getTikTokTotal(force),
-      this.analyticsApi.getTikTokTotalsByAccount(force),
-    ])
-      .pipe(finalize(() => { this.loadingTiktok = false; this.cdr.detectChanges(); }))
-      .subscribe({
-        next: ([total, accounts]) => {
-          this.tiktokTotal = total;
-          this.tiktokAccounts = [...(accounts ?? [])].sort((a, b) => b.followers - a.followers);
-          if (!this.tiktokSingleId && this.tiktokAccounts.length) {
-            this.tiktokSingleId = String(this.tiktokAccounts[0].account_id);
-          }
-          if (!this.tiktokCompareAId && this.tiktokAccounts.length) {
-            this.tiktokCompareAId = String(this.tiktokAccounts[0].account_id);
-          }
-          if (!this.tiktokCompareBId && this.tiktokAccounts.length > 1) {
-            this.tiktokCompareBId = String(this.tiktokAccounts[1].account_id);
-          }
-          this.cdr.detectChanges();
-        },
-        error: (e: any) => {
-          if (this.activeSource === 'tiktok') {
-            this.error = e?.message ?? 'Не удалось загрузить TikTok данные';
-          }
-        },
-      });
   }
 
   loadProjects(force = false) {
@@ -467,8 +422,12 @@ export class StatsPageComponent implements OnInit {
     this.appliedDateTo = this.dateTo;
 
     if (this.activeSource === 'youtube') {
-      if (this.mode === 'single') this.loadProjectInfo(true);
-      else this.runYoutubeComparison(true);
+      if (this.mode === 'single') {
+        this.youtubePeriodFilterActive = true;
+        this.loadProjectInfo(true);
+      } else {
+        this.runYoutubeComparison(true);
+      }
       return;
     }
 
@@ -549,6 +508,16 @@ export class StatsPageComponent implements OnInit {
 
     this.projectBId = this.projectAId;
     this.youtubeEpisodeBKey = '';
+
+    // "Тот же проект" is meant to compare two different periods of one project.
+    // If both sides start out with the same default period, the first comparison
+    // would show 0% difference everywhere and look broken. Auto-shift side B to
+    // the period immediately preceding side A's so there's a meaningful diff
+    // right away; the user can still adjust either date afterwards.
+    if (this.youtubeCompareKind === 'periods') {
+      this.shiftYoutubeCompareBToPrecedingPeriod();
+    }
+
     this.invalidateYoutubeComparison();
 
     if (this.youtubeCompareKind === 'episodes') {
@@ -995,7 +964,12 @@ export class StatsPageComponent implements OnInit {
 
   getEmptyStateTitle() {
     if (this.activeSource === 'youtube') {
-      return this.mode === 'compare' ? 'Пока нет данных для сравнения YouTube' : 'По этому проекту нет YouTube-данных';
+      if (this.mode === 'compare') {
+        return this.youtubeComparisonReady
+          ? 'За выбранный период нет данных'
+          : 'Пока нет данных для сравнения YouTube';
+      }
+      return 'По этому проекту нет YouTube-данных';
     }
     if (this.activeSource === 'yandex') return 'По проекту нет данных Яндекс Метрики';
     if (this.activeSource === 'tiktok') return 'По проекту нет TikTok-данных';
@@ -1004,9 +978,12 @@ export class StatsPageComponent implements OnInit {
 
   getEmptyStateCopy() {
     if (this.activeSource === 'youtube') {
-      return this.mode === 'compare'
-        ? 'Выберите два проекта или обновите данные.'
-        : 'Попробуйте другой проект.';
+      if (this.mode === 'compare') {
+        return this.youtubeComparisonReady
+          ? 'Ежедневная YouTube-статистика обычно доступна за последние несколько месяцев. Попробуйте более свежий период или другой проект.'
+          : 'Выберите два проекта или обновите данные.';
+      }
+      return 'Попробуйте другой проект.';
     }
     if (this.isProjectPlatformSource) return 'Проверьте проект и выбранный период.';
     return 'Данные появятся после ответа API.';
@@ -1057,14 +1034,6 @@ export class StatsPageComponent implements OnInit {
     }
 
     return `${labelB} лидирует в ${winsB} из ${rows.length} ключевых метрик.`;
-  }
-
-  getTikTokComparePrimaryLabel() {
-    return this.tiktokCompareAccountA?.channel_name || 'Аккаунт A';
-  }
-
-  getTikTokCompareSecondaryLabel() {
-    return this.tiktokCompareAccountB?.channel_name || 'Аккаунт B';
   }
 
   fmt(value: number) {
@@ -1287,6 +1256,28 @@ export class StatsPageComponent implements OnInit {
     return episode?.episode_name || episode?.youtube_id || 'Ролик не выбран';
   }
 
+  private shiftYoutubeCompareBToPrecedingPeriod() {
+    const from = this.youtubeCompareAFrom;
+    const to = this.youtubeCompareATo;
+    if (!from || !to) return;
+
+    const fromDate = new Date(`${from}T00:00:00Z`);
+    const toDate = new Date(`${to}T00:00:00Z`);
+    if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) return;
+
+    const dayMs = 24 * 60 * 60 * 1000;
+    const spanMs = toDate.getTime() - fromDate.getTime();
+    const prevTo = new Date(fromDate.getTime() - dayMs);
+    const prevFrom = new Date(prevTo.getTime() - spanMs);
+
+    this.youtubeCompareBFrom = this.toIsoDate(prevFrom);
+    this.youtubeCompareBTo = this.toIsoDate(prevTo);
+  }
+
+  private toIsoDate(date: Date) {
+    return date.toISOString().slice(0, 10);
+  }
+
   private formatDisplayDate(value: string) {
     if (!value) return 'дата не указана';
     const [year, month, day] = value.slice(0, 10).split('-');
@@ -1328,9 +1319,14 @@ export class StatsPageComponent implements OnInit {
 
   private computeYoutubePeriodKpi(items: YoutubeReleaseMetric[]) {
     const daily = this.aggregateYoutubePeriodByDate(items);
-    const views = daily.reduce((sum, row) => sum + row.views, 0);
-    const likes = daily.reduce((sum, row) => sum + row.likes, 0);
-    const comments = daily.reduce((sum, row) => sum + row.comments, 0);
+    // The upstream YouTube analytics feed reports day-level *deltas*, which can
+    // occasionally go negative (e.g. more unlikes than likes on a given day).
+    // That's a legitimate data point per day, but a negative "Лайки" total for
+    // the whole period reads as broken, so the aggregated totals are clamped
+    // to zero for display purposes.
+    const views = Math.max(0, daily.reduce((sum, row) => sum + row.views, 0));
+    const likes = Math.max(0, daily.reduce((sum, row) => sum + row.likes, 0));
+    const comments = Math.max(0, daily.reduce((sum, row) => sum + row.comments, 0));
     const engagement = views ? ((likes + comments) / views) * 100 : 0;
 
     return {
@@ -1353,6 +1349,8 @@ export class StatsPageComponent implements OnInit {
   }
 
   private filterByPeriod(episodes: EpisodeInfo[]): EpisodeInfo[] {
+    if (!this.youtubePeriodFilterActive) return episodes;
+
     const from = this.appliedDateFrom;
     const to = this.appliedDateTo;
     if (!from && !to) return episodes;
